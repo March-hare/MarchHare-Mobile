@@ -85,13 +85,11 @@ showIncidentMap = (function() {
       
   // URL to be used for fetching the incidents
   // TODO: this should be configureable
-  fetchURL = "http://ushahidi.march-hare.org/decayimage/json";
+  fetchURL = "http://ushahidi.march-hare.org/decayimage/json?callback=?";
   
   var aFeatures = new Array();
 
-  // Fetch the incidents
   var json = jQuery.getJSON(fetchURL, function(data) {
-    console.log(data);
     $.each(data.features, function(key, val) {
 
       // create a point from the latlon
@@ -109,55 +107,54 @@ showIncidentMap = (function() {
         newIncidentStyle.externalGraphic = data.decayimage_default_icon;
       }
 
-      // create a feature vector from the point and style
-      var feature = new OpenLayers.Feature.Vector(incidentPoint, null, newIncidentStyle);
-      feature.attributes = val.properties;
-      vLayer.addFeatures([feature]);
-
-      var offsetRadius = reportStyle.pointRadius+iconStyle.graphicHeight/2;
-      // if the icon is set then apply it (this requires controller mod)
-      // else if icon is an array, then place the icons around the incident
-      if (val.properties.icon instanceof Array) {
-        var numIcons = val.properties.icon.length;
-        var iconCt = 1;
-        // Loop over each icon setting externalGraphic and x,y offsets
-        $.each(val.properties.icon, function(index, icon) {
-          
-          var newIconStyle =  OpenLayers.Util.extend({}, iconStyle);
-          // TODO: make sure we are using the decayimage category icons if they
-          // are set.  I think this should be transparently set by the json 
-          // controller anyhow.
-          newIconStyle.externalGraphic = icon;
-          // TODO: -13 is a magic number here that got this working.
-          // I dont totally understant what its related to.
-          // pointRadius + strokeWidth + 2FunPixels?
-          newIconStyle.graphicXOffset = -13+
-            offsetRadius*Math.cos(((2*3.14)/(numIcons))*index);
-          newIconStyle.graphicYOffset = -13+
-            offsetRadius*Math.sin(((2*3.14)/(numIcons))*index);
-
-          iconPoint = incidentPoint.clone();
-          var feature = new OpenLayers.Feature.Vector(
-            iconPoint, null, newIconStyle);
-          vLayerIcons.addFeatures([feature]);
-        });
-      }
-      // If icon is a single value (this is the protocol default)
-      else if (val.properties.icon) {
-        iconStyle.externalGraphic = val.properties.icon;
-        iconStyle.graphicYOffset = offsetRadius;
-
         // create a feature vector from the point and style
-        var feature = new OpenLayers.Feature.Vector(incidentPoint, null, reportStyle);
-        vLayerIcons.addFeatures([feature]);
-      }
+        var feature = new OpenLayers.Feature.Vector(incidentPoint, null, newIncidentStyle);
+        feature.attributes = val.properties;
+        vLayer.addFeatures([feature]);
 
-      // TODO: if decayed add a transparent decay icon over top
-    });
-  })
-  .error(function() { console.log('json error')});
+        var offsetRadius = reportStyle.pointRadius+iconStyle.graphicHeight/2;
+        // if the icon is set then apply it (this requires controller mod)
+        // else if icon is an array, then place the icons around the incident
+        if (val.properties.icon instanceof Array) {
+          var numIcons = val.properties.icon.length;
+          var iconCt = 1;
+          // Loop over each icon setting externalGraphic and x,y offsets
+          $.each(val.properties.icon, function(index, icon) {
+            
+            var newIconStyle =  OpenLayers.Util.extend({}, iconStyle);
+            // TODO: make sure we are using the decayimage category icons if they
+            // are set.  I think this should be transparently set by the json 
+            // controller anyhow.
+            newIconStyle.externalGraphic = icon;
+            // TODO: -13 is a magic number here that got this working.
+            // I dont totally understant what its related to.
+            // pointRadius + strokeWidth + 2FunPixels?
+            newIconStyle.graphicXOffset = -13+
+              offsetRadius*Math.cos(((2*3.14)/(numIcons))*index);
+            newIconStyle.graphicYOffset = -13+
+              offsetRadius*Math.sin(((2*3.14)/(numIcons))*index);
 
-  console.log(json);
+            iconPoint = incidentPoint.clone();
+            var feature = new OpenLayers.Feature.Vector(
+              iconPoint, null, newIconStyle);
+            vLayerIcons.addFeatures([feature]);
+          });
+        }
+        // If icon is a single value (this is the protocol default)
+        else if (val.properties.icon) {
+          iconStyle.externalGraphic = val.properties.icon;
+          iconStyle.graphicYOffset = offsetRadius;
+
+          // create a feature vector from the point and style
+          var feature = new OpenLayers.Feature.Vector(incidentPoint, null, reportStyle);
+          vLayerIcons.addFeatures([feature]);
+        }
+
+        // TODO: if decayed add a transparent decay icon over top
+      });
+    }
+  );
+
   // Add the vector layer to the map
   map.addLayer(vLayer);
   map.addLayer(vLayerIcons);
