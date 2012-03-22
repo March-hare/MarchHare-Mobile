@@ -30,6 +30,12 @@ var MarchHare = {
       // TODO: figure out if this can actually handle a geo position
       func: Ti.App.Properties.setInt, 
       verify: function(){}
+    },
+    incidents: {
+      title: 'Current Incidents',
+      default_value: '{}',
+      func: Ti.App.Properties.setString, 
+      verify: function(){}
     }
   }
 };
