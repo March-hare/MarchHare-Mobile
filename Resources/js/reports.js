@@ -7,29 +7,33 @@
 
   // When the mobile app window is loaded, not to be confused with jQuery's
   // $(document).ready, This will likely be called before $(document).ready
-  Titanium.App.addEventListener('app:newSettingsAvailable', init);
-
-  $(document).ready(function() {
-    map = createMap('map', latitude, longitude, defaultZoom);
-    map.addControl( new OpenLayers.Control.LoadingPanel(
-      {minSize: new OpenLayers.Size(573, 366)}) );
-
-    showIncidentMap();
-    Titanium.App.addEventListener('app:updateGeolocation', 
-      handleUpdateGeolocation);
-  });
+  Ti.App.addEventListener('mapWindowLoaded', init);
+  Ti.App.addEventListener('newSettingsAvailable', newSettingsAvailable);
 
   function init(settings) {
-    alert('reports.js init called with settings: '+settings.latitude);
+    Ti.API.debug('reports.js init called with settings: '+JSON.stringify(settings));
+	updateSettings(settings);
+    $(document).ready(function() {
+      map = createMap('map', latitude, longitude, defaultZoom);
+      map.addControl( new OpenLayers.Control.LoadingPanel(
+        {minSize: new OpenLayers.Size(573, 366)}) );
+
+      showIncidentMap();
+      Titanium.App.addEventListener('updateGeolocation', 
+        handleUpdateGeolocation);
+    });
+  }
+  
+  function newSettingsAvailable(settings) {
+  	updateSettings(settings);
+    showIncidentMap();  
+  }
+    
+  function updateSettings(settings) {  
     latitude = settings.latitude;
     longitude = settings.longitude;
     defaultZoom = settings.zoom
     incidentUrl = 'http://' + settings.action_domain + '/decayimage/json?callback=?';
-    // Update the map position
-    mapSetCenter();
-
-    // TODO: this is not relevant if the BBOX has not changed due to a new position
-    showIncidentMap();
   }
 
   function handleUpdateGeolocation(location) {
@@ -55,7 +59,7 @@
     myPoint.transform(proj_4326, proj_900913);
     
     // Display the map centered on a latitude and longitude
-    map.setCenter(myPoint, zoom);
+    map.setCenter(myPoint, defaultZoom);
   }
 
   /**

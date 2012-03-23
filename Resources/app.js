@@ -23,7 +23,7 @@ function updateGeoLocation() {
     }
     
     // Fire an application event with the new geolocation data if we have it
-    Ti.App.fireEvent('app:updateGeolocation', {
+    Ti.App.fireEvent('updateGeolocation', {
       lat: location.latitude,
       lon: location.longitude
     });
