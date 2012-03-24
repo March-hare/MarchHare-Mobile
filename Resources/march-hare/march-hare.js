@@ -30,14 +30,27 @@ var MarchHare = {
       // TODO: figure out if this can actually handle a geo position
       func: Ti.App.Properties.setInt, 
       verify: function(){}
+    },
+    incidents: {
+      title: 'Current Incidents',
+      default_value: '{}',
+      func: Ti.App.Properties.setString, 
+      verify: function(){}
+    },
+    poll: {
+      title: 'Poll Interval in Seconds',
+      default_value: '30',
+      func: Ti.App.Properties.setInt, 
+      verify: function(){}
     }
   }
 };
 
 function verifyActionDomain(domain) {
+  Ti.API.debug('verifyActionDomain domain: '+ domain);
   // verify that the domain is of valid format
   var v = new RegExp();
-  v.compile("^[A-Za-z0-9-_]+\\.[A-Za-z0-9-_%&\?\/.=]+$");
+  v.compile("^[A-Za-z0-9-_]+\\.[A-Za-z0-9-_\\.]+$");
   if (!v.test(domain)) {
     return { result: false, message: 'invalid action domain  syntax' };
   }  

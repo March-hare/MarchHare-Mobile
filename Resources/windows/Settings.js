@@ -1,50 +1,85 @@
 (function () {
   MarchHare.ui.createSettingsWindow = function() {
+    var win = Ti.UI.createWindow({ modal: true });
 		var addSettingsView = Ti.UI.createView();
 		var container = Ti.UI.createView({layout:'vertical'});
 
-    var label = Ti.UI.createLabel({ 
-      text: 'Action Domain',
-    });
-    container.add(label);
+    // TODO: this should actually all be wrapped in a table with each setting 
+    // that is not a checkbox diverted to its own modal window
+    var domainLabel = Ti.UI.createLabel({ 
+      text: 'Action Domain', 
+      top: 0, left: 0,
+      color: '#000' });
+    container.add(domainLabel);
 
     // TODO: as we add more settings we will have different UI fields we will
     // want to use.  We will have to change this dependent on a new property
     // in the MarchHare.settings list
-    var field = Ti.UI.createTextField( { 
+    var domainField = Ti.UI.createTextField( { 
       top:10, left:0, right:0,
-      hintText: 'ushahidi.march-hare.org',
+      hintText: Ti.App.Properties.getString('action_domain', 
+        MarchHare.settings.action_domain.default_value),
       autoCorrect: false,
       autocapitalization: Titanium.UI.TEXT_AUTOCAPITALIZATION_NONE
     });
-    container.add(field);
+    container.add(domainField);
 
-    // Add a button for submitting the changes
-		addButton = Ti.UI.createButton({
-			title: 'submit',
-			top:20
-		});
-    container.add(addButton);
+    var pollLabel = Ti.UI.createLabel({ 
+      text: 'Poll Frequency in Seconds', 
+        top: 20, left: 0,
+        color: '#000' });
+    container.add(pollLabel);
 
-    addButton.
-      addEventListener("click", function(e) {
+    var pollField = Ti.UI.createTextField( { 
+      top:30, left:0, right:0,
+      hintText: Ti.App.Properties.getString('poll', 
+        MarchHare.settings.poll.default_value),
+      autoCorrect: false,
+      autocapitalization: Titanium.UI.TEXT_AUTOCAPITALIZATION_NONE
+    });
+    container.add(pollField);
+
+    var alert = Titanium.UI.createAlertDialog({
+      title: 'Settings message'
+    });
+
+    domainField.
+      addEventListener("blur", function(e) {
         // verify the new input
-        result = verifyActionDomain(field.value);
-        if (!result.result) {
-          alert(result.message);
-        } else {
-          Ti.App.Properties.setString('action_domain', field.value);
+        if (domainField.value.length) {
+          result = verifyActionDomain(domainField.value);
+          if (!result.result) {
+            alert.message = result.message;
+          } else {
+            Ti.App.Properties.setString('action_domain', domainField.value);
+            alert.message = 'Your changes have been saved';
+          }
+
+          alert.show();
+          setTimeout(function() {
+            alert.hide()
+          }, 2000); 
         }
-        
-        // close this window
-        var win = Ti.UI.currentWindow;
-        win.close();
+      });
+
+    pollField.
+      addEventListener("blur", function(e) {
+        if (pollField.value.length) {
+          if (parseInt(pollField.value) == pollField.value) {
+            Ti.App.Properties.setInt('poll', pollField.value);
+            alert.message = 'Your changes have been saved';
+          } else {
+            alert.message = 'Invalid poll interval';
+          }
+
+          alert.show();
+          setTimeout(function() {
+            alert.hide()
+          }, 2000); 
+        }
       });
 
     addSettingsView.add(container);
-    var win = Ti.UI.createWindow({
-      backgroundColor: 'black'
-    });
     win.add(addSettingsView);
     return win;
   }

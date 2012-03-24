@@ -3,22 +3,23 @@
   var longitude = null;
   var defaultZoom = null;
   var incidentUrl = null;
+  var pollSeconds = null;
   var map = null;
 
   // When the mobile app window is loaded, not to be confused with jQuery's
   // $(document).ready, This will likely be called before $(document).ready
   Ti.App.addEventListener('mapWindowLoaded', init);
-  Ti.App.addEventListener('newSettingsAvailable', newSettingsAvailable);
 
   function init(settings) {
     Ti.API.debug('reports.js init called with settings: '+JSON.stringify(settings));
-	updateSettings(settings);
+    updateSettings(settings);
     $(document).ready(function() {
       map = createMap('map', latitude, longitude, defaultZoom);
       map.addControl( new OpenLayers.Control.LoadingPanel(
         {minSize: new OpenLayers.Size(573, 366)}) );
 
-      showIncidentMap();
+      Ti.App.addEventListener('newSettingsAvailable', newSettingsAvailable);
+      Ti.App.addEventListener('updateReports', showIncidentMap);
       Titanium.App.addEventListener('updateGeolocation', 
         handleUpdateGeolocation);
     });
@@ -26,18 +27,28 @@
   
   function newSettingsAvailable(settings) {
   	updateSettings(settings);
-    showIncidentMap();  
   }
     
   function updateSettings(settings) {  
     latitude = settings.latitude;
     longitude = settings.longitude;
-    defaultZoom = settings.zoom
+    defaultZoom = settings.zoom;
     incidentUrl = 'http://' + settings.action_domain + '/decayimage/json?callback=?';
+    pollSeconds = settings.poll;
   }
 
   function handleUpdateGeolocation(location) {
-    alert('reports.js handleUpdateGeolocation called with location: '+location.latitude);
+    if (
+        (typeof(location.latitude) === 'undefined') ||
+        (typeof(location.longitude) === 'undefined') 
+       ) {
+      Ti.API.debug('handleUpdateGeolocation did not recieve location info');
+      return;
+    } 
+
+    Ti.API.debug('reports.js handleUpdateGeolocation called with location: '
+        +JSON.stringify(location));
+
     // check to see if it is different then the values we already have
     if ( (latitude != location.latitude) || (longitude != location.longitude) ) {
       latitude = location.latitude;
@@ -47,9 +58,6 @@
 
       // Update the map position
       mapSetCenter();
-
-      // TODO: this is not relevant if the BBOX has not changed due to a new position
-      showIncidentMap();
     }
   }
 
@@ -66,8 +74,8 @@
    * Handles display of the incidents current incidents on the map
    * This method is only called when the map view is selected
    */
-  showIncidentMap = (function() {
-    //return showIncidentMapOrig();
+  function showIncidentMap (incidents) {
+    Ti.API.debug('showIncidentMap called with incidents: '+JSON.stringify(incidents));
 
     // Set the layer name
     var layerName = "Reports";
@@ -118,71 +126,67 @@
         
     var aFeatures = new Array();
 
-    var json = jQuery.getJSON(incidentUrl, function(data) {
-      $.each(data.features, function(key, val) {
+    $.each(incidents.features, function(key, val) {
+      // create a point from the latlon
+      var incidentPoint = new OpenLayers.Geometry.Point(
+        val.geometry.coordinates[0],
+        val.geometry.coordinates[1]
+      );
+      var proj = new OpenLayers.Projection("EPSG:4326");
+      incidentPoint.transform(proj, map.getProjectionObject());
 
-        // create a point from the latlon
-        var incidentPoint = new OpenLayers.Geometry.Point(
-          val.geometry.coordinates[0],
-          val.geometry.coordinates[1]
-        );
-        var proj = new OpenLayers.Projection("EPSG:4326");
-        incidentPoint.transform(proj, map.getProjectionObject());
+      // If the incident has ended but it is configured to "decay" we should
+      // set the incident icon to the decayimage default icon
+      var newIncidentStyle =  OpenLayers.Util.extend({}, reportStyle);
+      if (val.incidentHasEnded == 1) {
+        newIncidentStyle.externalGraphic = incidents.decayimage_default_icon;
+      }
 
-        // If the incident has ended but it is configured to "decay" we should
-        // set the incident icon to the decayimage default icon
-        var newIncidentStyle =  OpenLayers.Util.extend({}, reportStyle);
-        if (val.incidentHasEnded == 1) {
-          newIncidentStyle.externalGraphic = data.decayimage_default_icon;
-        }
+      // create a feature vector from the point and style
+      var feature = new OpenLayers.Feature.Vector(incidentPoint, null, newIncidentStyle);
+      feature.attributes = val.properties;
+      vLayer.addFeatures([feature]);
 
-          // create a feature vector from the point and style
-          var feature = new OpenLayers.Feature.Vector(incidentPoint, null, newIncidentStyle);
-          feature.attributes = val.properties;
-          vLayer.addFeatures([feature]);
+      var offsetRadius = reportStyle.pointRadius+iconStyle.graphicHeight/2;
+      // if the icon is set then apply it (this requires controller mod)
+      // else if icon is an array, then place the icons around the incident
+      if (val.properties.icon instanceof Array) {
+        var numIcons = val.properties.icon.length;
+        var iconCt = 1;
+        // Loop over each icon setting externalGraphic and x,y offsets
+        $.each(val.properties.icon, function(index, icon) {
+          
+          var newIconStyle =  OpenLayers.Util.extend({}, iconStyle);
+          // TODO: make sure we are using the decayimage category icons if they
+          // are set.  I think this should be transparently set by the json 
+          // controller anyhow.
+          newIconStyle.externalGraphic = icon;
+          // TODO: -13 is a magic number here that got this working.
+          // I dont totally understant what its related to.
+          // pointRadius + strokeWidth + 2FunPixels?
+          newIconStyle.graphicXOffset = -13+
+            offsetRadius*Math.cos(((2*3.14)/(numIcons))*index);
+          newIconStyle.graphicYOffset = -13+
+            offsetRadius*Math.sin(((2*3.14)/(numIcons))*index);
 
-          var offsetRadius = reportStyle.pointRadius+iconStyle.graphicHeight/2;
-          // if the icon is set then apply it (this requires controller mod)
-          // else if icon is an array, then place the icons around the incident
-          if (val.properties.icon instanceof Array) {
-            var numIcons = val.properties.icon.length;
-            var iconCt = 1;
-            // Loop over each icon setting externalGraphic and x,y offsets
-            $.each(val.properties.icon, function(index, icon) {
-              
-              var newIconStyle =  OpenLayers.Util.extend({}, iconStyle);
-              // TODO: make sure we are using the decayimage category icons if they
-              // are set.  I think this should be transparently set by the json 
-              // controller anyhow.
-              newIconStyle.externalGraphic = icon;
-              // TODO: -13 is a magic number here that got this working.
-              // I dont totally understant what its related to.
-              // pointRadius + strokeWidth + 2FunPixels?
-              newIconStyle.graphicXOffset = -13+
-                offsetRadius*Math.cos(((2*3.14)/(numIcons))*index);
-              newIconStyle.graphicYOffset = -13+
-                offsetRadius*Math.sin(((2*3.14)/(numIcons))*index);
-
-              iconPoint = incidentPoint.clone();
-              var feature = new OpenLayers.Feature.Vector(
-                iconPoint, null, newIconStyle);
-              vLayerIcons.addFeatures([feature]);
-            });
-          }
-          // If icon is a single value (this is the protocol default)
-          else if (val.properties.icon) {
-            iconStyle.externalGraphic = val.properties.icon;
-            iconStyle.graphicYOffset = offsetRadius;
-
-            // create a feature vector from the point and style
-            var feature = new OpenLayers.Feature.Vector(incidentPoint, null, reportStyle);
-            vLayerIcons.addFeatures([feature]);
-          }
-
-          // TODO: if decayed add a transparent decay icon over top
+          iconPoint = incidentPoint.clone();
+          var feature = new OpenLayers.Feature.Vector(
+            iconPoint, null, newIconStyle);
+          vLayerIcons.addFeatures([feature]);
         });
       }
-    );
+      // If icon is a single value (this is the protocol default)
+      else if (val.properties.icon) {
+        iconStyle.externalGraphic = val.properties.icon;
+        iconStyle.graphicYOffset = offsetRadius;
+
+        // create a feature vector from the point and style
+        var feature = new OpenLayers.Feature.Vector(incidentPoint, null, reportStyle);
+        vLayerIcons.addFeatures([feature]);
+      }
+
+      // TODO: if decayed add a transparent decay icon over top
+    });
 
     // Add the vector layer to the map
     map.addLayer(vLayer);
@@ -190,5 +194,5 @@
 
     // Add feature selection events
     addFeatureSelectionEvents(map, vLayer);
-  });
+  };
 })();

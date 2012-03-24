@@ -21,22 +21,25 @@
       settings.longitude = Ti.App.Properties.getDouble('longitude', MarchHare.settings.longitude.default_value);
       settings.zoom = Ti.App.Properties.getInt('zoom', MarchHare.settings.zoom.default_value);
       settings.action_domain = Ti.App.Properties.getString('action_domain', MarchHare.settings.action_domain.default_value);
+      settings.poll = Ti.App.Properties.getString('poll', MarchHare.settings.poll.default_value);
       Ti.API.debug('load event for mapview caught, sending settings');
       Ti.App.fireEvent('mapWindowLoaded', settings);
     });
 
     return webview;
   }
- 
-  var win = Ti.UI.createWindow({
-    title: 'In the streets',
-      url: 'windows/MapWinHelper.js',
-      exitOnClose: true
-  });
 
-  Ti.API.debug('About to add map view: ');
+  MarchHare.ui.createMapWindow = function() {
+    var win = Ti.UI.createWindow({
+      title: 'In the streets',
+        url: 'windows/MapWinHelper.js',
+        exitOnClose: true
+    });
 
-  win.add( MarchHare.ui.createMapView() );
+    Ti.API.debug('About to add map view: ');
 
-  win.open();
+    win.add( MarchHare.ui.createMapView() );
+
+    return win;
+  }
 })();
