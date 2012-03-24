@@ -55,8 +55,16 @@
       userLocation:true,
     });
 
-    Ti.App.addEventListener('updateGeolocation', updateMapPosition);
+    Ti.App.addEventListener('updateGeolocation', function(location) {
+      Ti.API.debug("updateMapPosition: " + JSON.stringify(location));
+      // Set map center
+      mapview.setCenter({x: location.latitude, y: location.longitude});
+    });
     Ti.App.addEventListener('updateReports', updateMapReports);
+    Ti.App.addEventListener('updateAppSettings', function() {
+      // TODO: re-position the map to the region covered by the new ushahidi instance
+      updateMapReports();
+    });
 
     return mapview;
   }
@@ -73,16 +81,6 @@
     win.add( MarchHare.ui.createMapView() );
 
     return win;
-  }
-
-  function updateMapPosition(location) {
-    Ti.API.debug("updateMapPosition: " + JSON.stringify(location));
-
-    // Set map center
-    mapview.setCenter({x: location.latitude, y: location.longitude});
-    
-    // set user position
-
   }
 
   // TODO: only add annotations relevant to the current view BBOX
