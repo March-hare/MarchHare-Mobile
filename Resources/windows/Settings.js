@@ -1,10 +1,13 @@
 (function () {
   MarchHare.ui.createSettingsWindow = function() {
+    var win = Ti.UI.createWindow({
+      modal: true
+    });
 		var addSettingsView = Ti.UI.createView();
 		var container = Ti.UI.createView({layout:'vertical'});
 
     var label = Ti.UI.createLabel({ 
-      text: 'Action Domain',
+      text: 'Action Domain', top: 0, left: 0
     });
     container.add(label);
 
@@ -20,31 +23,48 @@
     container.add(field);
 
     // Add a button for submitting the changes
-		addButton = Ti.UI.createButton({
-			title: 'submit',
-			top:20
+		saveButton = Ti.UI.createButton({
+			title: 'Save',
+			top:20, left: 0
 		});
-    container.add(addButton);
+		cancelButton = Ti.UI.createButton({
+			title: 'Cancel',
+			top:30, left: 0
+		});
 
-    addButton.
+    var alert = Titanium.UI.createAlertDialog({
+      title: 'Settings message'
+    });
+
+    saveButton.
       addEventListener("click", function(e) {
         // verify the new input
         result = verifyActionDomain(field.value);
         if (!result.result) {
-          alert(result.message);
+          alert.message = result.message;
+          alert.show();
+          setTimeout(function() {
+            alert.hide()
+          }, 2000);
         } else {
           Ti.App.Properties.setString('action_domain', field.value);
+          Ti.API.debug('Action Domain (action_domain) set to '+ field.value);
         }
         
-        // close this window
-        var win = Ti.UI.currentWindow;
+        // We were previously trying to force close the window here, but we
+        // should just leave this to the native controls (ie back button on
+        // android)
+      });
+
+    cancelButton.
+      addEventListener("click", function(e) {
         win.close();
       });
 
+    container.add(saveButton);
+    container.add(cancelButton);
+
     addSettingsView.add(container);
-    var win = Ti.UI.createWindow({
-      backgroundColor: 'black'
-    });
     win.add(addSettingsView);
     return win;
   }
