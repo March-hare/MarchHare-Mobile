@@ -16,6 +16,11 @@ if (Ti.Platform.osname == 'android') {
       var settingsWin = MarchHare.ui.createSettingsWindow();
       settingsWin.open({fullscreen:true});
     });
+    menuItem = menu.add({ title: 'Reports' });
+    menuItem.addEventListener("click", function(){
+      var reportsWin = MarchHare.ui.createReportsWindow();
+      settingsWin.open({fullscreen:true});
+    });
   };
 } 
 /*
