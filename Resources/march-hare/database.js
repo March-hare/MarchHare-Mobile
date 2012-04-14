@@ -30,7 +30,8 @@
     if (
       typeof category == 'undefined' ||
       typeof category.title == 'undefined' ||
-      typeof category.icon == 'undefined'
+      typeof category.icon == 'undefined' ||
+      typeof category.id == 'undefined'
       ) {
       return false;
     }
@@ -39,20 +40,14 @@
     // Some kind of error message would be appropriate, but even better would 
     // be just deleting the offending data so that we can insert new data as we
     // are synching with the server
-    var query = 'DELETE FROM CATEGORY WHERE '
-        +' title="'+ category.title
-        +' OR icon="'+ category.icon;
-
-    if (typeof category.id != 'undefined') {
-      query += ' OR id='+ category.id;
-    }
+    var query = 'DELETE FROM categories WHERE id='+category.id;
     db.execute(query);
 
     // TODO: check the number of rows affected and print a message if we deleted
     // anything
-    query = 'INSERT INTO CATEGORY(id,title,icon,decayimage) '+
-      'VALUES('+ category.id +', '+ category.title +', '+ category.icon 
-      +', '+ category.decayimage +')';
+    query = 'INSERT INTO categories(id,title,icon,decayimage) '+
+      'VALUES('+ category.id +', "'+ category.title +'", "'+ category.icon 
+      +'", "'+ category.decayimage +'")';
 
     // TODO: return the category id on success, false on error
     return db.execute(query);
@@ -66,10 +61,10 @@
 
     var query = '';
     if (typeof category.id != 'undefined') {
-      query = 'SELECT * from category where id=' + category.id;
+      query = 'SELECT * from categories where id=' + category.id;
     }
     else if (typeof category.title != 'undefined') {
-      query = 'SELECT * from category where title=' + category.title;
+      query = 'SELECT * from categories where title=' + category.title;
     }
     else {
       return false;
@@ -98,16 +93,16 @@
           categories.payload.categories instanceof Array &&
           typeof categories.payload.decayimage_default_icon != 'undefined'
         ) {
-          categories.payload.categories.each(function(category) {
-            setCategory(category);
-          });
+          for (i in categories.payload.categories) {
+            MarchHare.database.setCategory(categories.payload.categories[i].category);
+          };
 
           // Get the default decayimage
-          setSetting('decayimage_default_icon', 
+          MarchHare.database.setSetting('decayimage_default_icon', 
             categories.payload.decayimage_default_icon);
         }
         else {
-          Ti.API.debug('InitializeCategories: We recieved an invalid response '+
+          Ti.API.error('InitializeCategories: We recieved an invalid response '+
             'from the server: '+ JSON.stringify(categories));
         }
 
@@ -131,6 +126,7 @@
 
     // TODO: pull down all the category icons and decayimages for local storage
   };
+
   MarchHare.database.setIncident = function(incident) {
     var i;
     var query;
@@ -142,15 +138,15 @@
     
     // Insert the incident
     query = 'INSERT INTO incidents(id, title, description, date, lat, lon) '+
-      'VALUES('+ incident.incident.incidentid +', '+ incident.incident.incidenttitle +', '+
-          incident.incident.incidentdescription +', '+ incident.incident.incidentdate +', '+
+      'VALUES('+ incident.incident.incidentid +', "'+ incident.incident.incidenttitle +'", "'+
+          incident.incident.incidentdescription +'", "'+ incident.incident.incidentdate +'", '+
           incident.incident.incidentlatitude +', '+ incident.incident.incidentlongitude +')';
     db.execute(query);
 
     // Insert rows for the incident_category join table
     for (i in incident.categories) {
       query = 'INSERT INTO incident_categories(incident_id, category_id) '+
-        'VALUES('+ i.category.id +', '+ incident.incident.incidentid +')';
+        'VALUES('+ incident.categories[i].category.id +', '+ incident.incident.incidentid +')';
       db.execute(query);
     }
   };
@@ -173,7 +169,7 @@
     // Get a list of new categories
     var newCats = [];
     for (i in incident.categories) {
-      newCats.push(i.category.id);
+      newCats.push(incident.categories[i].category.id);
     }
 
     // Get a list of currently assigned categories
@@ -207,24 +203,27 @@
   MarchHare.database.getIncident = function(incident) {
     var query;
 
-    query = 'SELECT incidents.*, category.* FROM incidents '+
-          'LEFT JOIN incident_categories ON (incident.id = incident_categories.incident_id) '+
+    query = 'SELECT incidents.*, categories.* FROM incidents '+
+          'LEFT JOIN incident_categories ON (incidents.id = incident_categories.incident_id) '+
           'LEFT JOIN categories ON (incident_categories.category_id = categories.id) '+
-          'WHERE incident.id='+ incident.incidentid;
+          'WHERE incidents.id='+ incident.incidentid;
 
     return db.execute(query);
   };
 
   MarchHare.database.getIncidents = function() {
-    var query = 'SELECT incidents.*, category.* FROM incidents';
+    var query = 'SELECT incidents.*, categories.* FROM incidents '+
+      'LEFT JOIN incident_categories on (incident_categories.incident_id - incidents.id) '+
+      'LEFT JOIN categories on (categories.id = incident_categories.category_id)';
 
     return db.execute(query);
   }
 
   MarchHare.database.getIncidentsJSON = function() {
     var query;
-    var rows = getIncidents();
+    var rows = MarchHare.database.getIncidents();
     var incidents = [];
+      Ti.API.debug(JSON.stringify(rows));
     while (rows.isValidRow()) {
       var incident = {
         incident: {
@@ -239,6 +238,7 @@
       };
       rows.next();
 
+      // TODO: this does not take into consideration decayicon images
       // get the associated category icons in the object
       query = 'SELECT url FROM categories '+
         'LEFT JOIN incident_categories ON '+
@@ -256,16 +256,78 @@
     }
     rows.close();
 
-    return JSON.stringify(incidents);
-  }
+    result = JSON.stringify(incidents);
+    return result;
+ }
 
   MarchHare.database.flushIncidents = function() {
     var query = 'DELETE from incidents';
     return db.execute(query);
   }
 
-  MarchHare.database.initializeIncidents = function() { }
+  MarchHare.database.initializeIncidents = function() { 
+    MarchHare.database.flushIncidents();
+    var url = 'http://'+ 
+        Ti.App.Properties.getString('action_domain',
+          MarchHare.settings.action_domain.default_value)+
+        '/api/?task=decayimage';
 
+    // TODO: start an indicator
+    var xhr = Ti.Network.createHTTPClient();
+    xhr.timeout = 5000;
+    xhr.open("GET", url);
+    xhr.onload = function() { 
+      handleServerResponse(this.responseText);
+    };
+    xhr.onerror = function(e) { logServerError(e); };
+    xhr.send();
+  }
+
+  function handleServerResponse(response) {
+    var jNewIncidents = JSON.parse(response);
+    var newIncidents = false;
+
+    if (
+      typeof jNewIncidents == 'undefined' ||
+      typeof jNewIncidents.payload == 'undefined' ||
+      typeof jNewIncidents.payload.incidents == 'undefined' ||
+      !(jNewIncidents.payload.incidents instanceof Array) ){
+      Ti.API.error('initializeIncidents: recieved invalid json from the server: '+
+        JSON.stringify(jNewIncidents));
+      return false;
+    }
+
+    for ( var i  in jNewIncidents.payload.incidents) {
+      newIncidents = true;
+      var incident = {
+        incident: {
+          incidentid: jNewIncidents.payload.incidents[i].incident.incidentid,
+          incidenttitle: jNewIncidents.payload.incidents[i].incident.incidenttitle,
+          incidentdescription: jNewIncidents.payload.incidents[i].incident.incidentdescription,
+          incidentdate: jNewIncidents.payload.incidents[i].incident.incidentdate,
+          incidentlatitude: jNewIncidents.payload.incidents[i].incident.locationlatitude,
+          incidentlongitude: jNewIncidents.payload.incidents[i].incident.locationlongitude,
+        },
+        categories: jNewIncidents.payload.incidents[i].categories
+      };
+
+      MarchHare.database.setIncident(incident);
+    }
+
+    if (!newIncidents) {
+      Ti.API.debug('nitializeIncidents: did not recieve any reports');
+    }
+  }
+
+  function logServerError(e) {
+    // TODO: we want to notify the user somehow, but we dont want to 
+    // send an alert for each failure.  Maybe we can store the error 
+    // statistics somehow and display them to the user in a menu somewhere
+    Ti.API.debug("STATUS: " + this.status);
+    Ti.API.debug("TEXT: " + this.responseText);
+    Ti.API.debug("ERROR: " + e.error);
+    Ti.API.error('Unable to get json from: '+ url);
+  }
 
   // This will perform some tests on the database and log the results.  The 
   // database will not retain data already stored in it after this operation
@@ -289,13 +351,23 @@
     result = db.execute(query);
     while (result.isValidRow()) {
       Ti.API.debug('database.js::testDatabase: '+
-        'category.id='+result.fieldByName('id')+', '+
-        'category.title='+category.title);
+        'categories.id='+result.fieldByName('id')+', '+
+        'categories.title='+result.fieldByName('title'));
       result.next();
     }
     result.close();
 
     // g/s incidents
+    MarchHare.database.initializeIncidents();
+    result = JSON.parse(MarchHare.database.getIncidentsJSON());
+    Ti.API.debug('database.js::testDatabase: intialized incidents:');
+    for (i in result) {
+      var output = 'incidents.id='+result[i].incident.incidentid+', '+
+        'incidents.title='+result[i].incident.incidenttitle +', icons= '+
+        JSON.stringify(result[i].icon);
+      Ti.API.debug(output);
+    }
   }
+
 })();
 
