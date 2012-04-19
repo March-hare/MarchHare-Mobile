@@ -14,16 +14,17 @@
 	font-size:14px;
 }
 .infowindow .infowindow_list{
-	margin-bottom:10px;
 	font-size:14px;
 	font-weight:bold;
+  position: absolute;
+  top: -24px;
 }
 .infowindow .infowindow_image{
-	float:left;
-	margin-right:10px;
+  position: absolute;
+  right: 10px;
+  top: -23px;
 }
 	.infowindow .infowindow_image img{
-		border:1px solid #3764aa;
 	}
 .infowindow ul{
 	font-weight:bold;
