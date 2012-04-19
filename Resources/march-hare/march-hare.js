@@ -2,6 +2,47 @@
 var MarchHare = {
   ui: {},
   database: {},
+  xhr: Ti.Network.createHTTPClient(),
+  xhrGetSemaphore: function() {
+    if (MarchHare.xhrSemaphore) {
+      return false;
+    } else {
+      return MarchHare.xhrSemaphore = true;
+    }
+  },
+  xhrReleaseSemaphore: function() {
+    MarchHare.xhrSemaphore = false;
+  },
+  xhrLogServerError: function(e, url) {
+    // TODO: we want to notify the user somehow, but we dont want to 
+    // send an alert for each failure.  Maybe we can store the error 
+    // statistics somehow and display them to the user in a menu somewhere
+    Ti.API.debug("STATUS: " + this.status);
+    Ti.API.debug("TEXT: " + this.responseText);
+    Ti.API.debug("ERROR: " + e.error);
+    Ti.API.error('Failied URL: '+ url);
+  },
+  xhrSemaphore: false,
+  xhrProcess: function (parameters) {
+    // There is no garentee that your web request will happen when you request 
+    // it.  Creating multiple http clients consumes a lot of memory.  We use a 
+    // semaphore here to make sure we only have one process ata a time.  It is 
+    // expected that this function is called after the semaphore is obtained,
+    // failure to do so will cause breakage!
+    MarchHare.xhr.setOnerror(function() {
+      MarchHare.xhrLogServerError(e, parameters.url);
+      MarchHare.xhrReleaseSemaphore();
+    });
+
+    MarchHare.xhr.setOnload(function() {
+      parameters.onload(this.responseText);
+      MarchHare.xhrReleaseSemaphore();
+    });
+
+    MarchHare.xhr.open("GET", parameters.url);
+    Ti.API.debug('MarchHare.xhrProcess url: '+ parameters.url);
+    MarchHare.xhr.send();
+  },
   settings: {
     action_domain: {
       title: 'Action Domain',
@@ -40,6 +81,8 @@ var MarchHare = {
     }
   }
 };
+
+MarchHare.xhr.setTimeout(5000);
 
 function verifyActionDomain(domain) {
   Ti.API.debug('verifyActionDomain domain: '+ domain);

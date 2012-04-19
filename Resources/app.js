@@ -1,4 +1,5 @@
 var DEV = true;
+var POLLING = false;
 Ti.App.Properties.setBool('map_initialized', false);
 
 // this sets the background color of the master UIView (when there are no windows/tab groups on it)
@@ -74,7 +75,9 @@ function updateGeoLocation() {
 }
 
 function pollForReports() {
+  if (POLLING) { return; }
 
+  POLLING = true;
   var lastpoll = Ti.App.Properties.getString('lastpoll', '1970-01-01');
   var url = 'http://'+ 
       Ti.App.Properties.getString('action_domain',
@@ -82,13 +85,23 @@ function pollForReports() {
       '/api/?task=decayimage&by=sincedate&date='+lastpoll;
 
   // TODO: start an indicator
-  var xhr = Ti.Network.createHTTPClient();
-  xhr.timeout = 5000;
-  xhr.open("GET", url);
-  Ti.API.debug('pollForReports url: '+ url);
-  xhr.onload = function() { handleServerResponse(this.responseText); }
-  xhr.onerror = function(e) { logServerError(e, url); }
-  xhr.send();
+  var t = setInterval(function() {
+
+    // If we cant set the semaphore then we do not have access to the HTTP 
+    // Client yet.
+    if (!MarchHare.xhrGetSemaphore()) {
+      Ti.API.info('Delaying reports request because the HTTP Client is in use.');
+      return;
+    }
+
+    MarchHare.xhrProcess({
+      url: url,
+      onload: handleServerResponse
+    });
+
+    clearInterval(t);
+    POLLING = false;
+  }, 100);
 }
 
 function handleServerResponse(response) {
@@ -169,15 +182,4 @@ function handleServerResponse(response) {
   if (!error) {
     Ti.App.Properties.setString('lastpoll', new Date().toISOString());
   }
-
-}
-
-function logServerError(e, url) {
-  // TODO: we want to notify the user somehow, but we dont want to 
-  // send an alert for each failure.  Maybe we can store the error 
-  // statistics somehow and display them to the user in a menu somewhere
-  Ti.API.debug("STATUS: " + this.status);
-  Ti.API.debug("TEXT: " + this.responseText);
-  Ti.API.debug("ERROR: " + e.error);
-  Ti.API.error('Unable to get json from: '+ url);
 }
