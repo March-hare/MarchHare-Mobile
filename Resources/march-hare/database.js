@@ -1,5 +1,21 @@
 (function () {
-  var db  = Ti.Database.install('march-hare/incidents.sqllite', 'incidents');
+
+  // install acts as a short cut to open if the database is already installed
+  // if it is not installed it will place the db in the correct location and 
+  // return a db hanler like open
+  var db;
+  // TODO: figure out how to install on the sdcard for android
+  /*
+  if (Ti.Platform.name === 'android' && Ti.Filesystem.isExternalStoragePresent()) {
+    db2 = Ti.Database.install('incidents.sqllite', 
+      Ti.Filesystem.externalStorageDirectory + 
+      'NATOG82012CHI' + Ti.Filesystem.separator + 
+      'incidents');
+  } else {
+    db  = Ti.Database.install('incidents.sqllite', 'incidents');
+  }
+  */
+  db  = Ti.Database.install('incidents.sqlite', 'incidents');
 
   MarchHare.database.setSetting = function(key, value) {
     var query = 'DELETE FROM settings WHERE key="'+key+'"';
@@ -7,7 +23,8 @@
 
     query = 'INSERT INTO settings (key, value) VALUES("'+
       key +'", "'+ value +'")';
-    return db.execute(query);
+    db.execute(query);
+    return db.lastInsertRowId;
   }
 
   MarchHare.database.getSetting = function(key) {
@@ -17,6 +34,10 @@
     if (rows.isValidRow()) {
       value = rows.fieldByName('value');
     }
+    else {
+      value = false;
+    }
+
     rows.close();
     return value;
   }
@@ -49,8 +70,9 @@
       'VALUES('+ category.id +', "'+ category.title +'", "'+ category.icon 
       +'", "'+ category.decayimage +'")';
 
-    // TODO: return the category id on success, false on error
-    return db.execute(query);
+    // TODO: return false on error
+    db.execute(query);
+    return db.lastInsertRowId;
   };
 
   // TODO: protect against sql injection
@@ -105,7 +127,7 @@
           Ti.API.error('InitializeCategories: We recieved an invalid response '+
             'from the server: '+ JSON.stringify(categories));
         }
-
+        Ti.App.fireEvent('categoriesDownloaded');
 
       },
       onerror: function(e) {
@@ -127,9 +149,20 @@
     // TODO: pull down all the category icons and decayimages for local storage
   };
 
+  MarchHare.database.flushCategories = function() {
+    var query = "DELETE FROM categories";
+    db.execute(query);
+  }
+
+  MarchHare.database.flushIncidentCategories = function() {
+    var query = "DELETE FROM incident_categories";
+    db.execute(query);
+  }
+
   MarchHare.database.setIncident = function(incident) {
     var i;
     var query;
+    var result;
 
     // We assume that all categories we recieve here will already exisit in the
     // database.  This will have to be accomplished with a call to 
@@ -137,27 +170,32 @@
     // TODO: call initializeCategories again here if we find a new category
     
     // Insert the incident
-    query = 'INSERT INTO incidents(id, title, description, date, lat, lon) '+
+    query = 'INSERT INTO incidents(id, title, description, date, lat, lon, ended) '+
       'VALUES('+ incident.incident.incidentid +', "'+ incident.incident.incidenttitle +'", "'+
           incident.incident.incidentdescription +'", "'+ incident.incident.incidentdate +'", '+
-          incident.incident.incidentlatitude +', '+ incident.incident.incidentlongitude +')';
-    db.execute(query);
+          incident.incident.incidentlatitude +', '+ incident.incident.incidentlongitude +', '+
+          incident.incident.incidenthasended +')';
+    i = db.execute(query);
+    result = db.lastInsertRowId;
 
     // Insert rows for the incident_category join table
     for (i in incident.categories) {
-      query = 'INSERT INTO incident_categories(incident_id, category_id) '+
+      query = 'INSERT INTO incident_categories(category_id, incident_id) '+
         'VALUES('+ incident.categories[i].category.id +', '+ incident.incident.incidentid +')';
       db.execute(query);
     }
+
+    return result;
   };
 
   MarchHare.database.updateIncident = function(incident) {
     var query = 'UPDATE incident '+
       'SET title='+ incident.incidenttitle +', '+
       'SET description='+ incident.incident.description+', '+
-      'SET date='+ incident.incident.date+', '+
-      'SET lat='+ incident.incident.latitude+', '+
-      'SET lon='+ incident.incident.longitude+' '+
+      'SET date='+ incident.incident.incidentdate+', '+
+      'SET lat='+ incident.incident.incidentlatitude+', '+
+      'SET lon='+ incident.incident.incidentlongitude+' '+
+      'SET ended='+ incident.incident.incidenthasended+' '+
       'WHERE id='+incident.incident.incidentid;
 
     db.execute(query);
@@ -200,22 +238,55 @@
 
   }
 
+  // TODO: this needs to be rewritten so it does not create multiple rows for 
+  // each category.
   MarchHare.database.getIncident = function(incident) {
     var query;
 
-    query = 'SELECT incidents.*, categories.* FROM incidents '+
-          'LEFT JOIN incident_categories ON (incidents.id = incident_categories.incident_id) '+
-          'LEFT JOIN categories ON (incident_categories.category_id = categories.id) '+
-          'WHERE incidents.id='+ incident.incidentid;
+    query = 'SELECT * FROM incidents '+
+          'WHERE id='+ incident.incidentid;
 
     return db.execute(query);
   };
 
-  MarchHare.database.getIncidents = function() {
-    var query = 'SELECT incidents.*, categories.* FROM incidents '+
-      'LEFT JOIN incident_categories on (incident_categories.incident_id - incidents.id) '+
-      'LEFT JOIN categories on (categories.id = incident_categories.category_id)';
+  MarchHare.database.getIncidentJSON = function(incident) {
+    var rows = MarchHare.database.getIncident(incident.incident);
+    if (rows.rowCount == 0) {
+      return false;
+    }
 
+    var incident = {
+      incident: {
+        incidentid: rows.fieldByName('id'),
+        incidenttitle: rows.fieldByName('title'),
+        incidentdescription: rows.fieldByName('description'),
+        incidentdate: rows.fieldByName('date'),
+        locationlatitude: rows.fieldByName('lat'),
+        locationlongitude: rows.fieldByName('lon'),
+        incidenthasended: rows.fieldByName('ended')
+      },
+      icon: []
+    };
+
+    // TODO: this does not take into consideration decayicon images
+    // get the associated category icons in the object
+    query = 'SELECT icon FROM categories '+
+      'LEFT JOIN incident_categories ON '+
+      '(incident_categories.category_id = categories.id) '+
+      'WHERE incident_categories.incident_id='+ incident.incident.incidentid;
+
+    rows = db.execute(query);
+    while (rows.isValidRow()) {
+      incident.icon.push(rows.fieldByName('icon'));
+      rows.next();
+    }
+    rows.close();
+
+    return incident;
+  }
+
+  MarchHare.database.getIncidents = function() {
+    var query = 'SELECT * FROM incidents';
     return db.execute(query);
   }
 
@@ -223,7 +294,6 @@
     var query;
     var rows = MarchHare.database.getIncidents();
     var incidents = [];
-      Ti.API.debug(JSON.stringify(rows));
     while (rows.isValidRow()) {
       var incident = {
         incident: {
@@ -232,7 +302,8 @@
           incidentdescription: rows.fieldByName('description'),
           incidentdate: rows.fieldByName('date'),
           locationlatitude: rows.fieldByName('lat'),
-          locationlongitude: rows.fieldByName('lon')
+          locationlongitude: rows.fieldByName('lon'),
+          incidenthasended: rows.fieldByName('ended')
         },
         icon: []
       };
@@ -240,14 +311,18 @@
 
       // TODO: this does not take into consideration decayicon images
       // get the associated category icons in the object
-      query = 'SELECT url FROM categories '+
+      query = 'SELECT icon,decayimage FROM categories '+
         'LEFT JOIN incident_categories ON '+
         '(incident_categories.category_id = categories.id) '+
         'WHERE incident_categories.incident_id='+ incident.incident.incidentid;
 
       catRows = db.execute(query);
       while (catRows.isValidRow()) {
-        incident.icon.push(rows.fieldByName('url'));
+        if (incident.incident.incidenthasended == 1) {
+          incident.icon.push(catRows.fieldByName('decayimage'));
+        } else {
+          incident.icon.push(catRows.fieldByName('icon'));
+        }
         catRows.next();
       }
       catRows.close();
@@ -278,8 +353,11 @@
     xhr.open("GET", url);
     xhr.onload = function() { 
       handleServerResponse(this.responseText);
+      Ti.App.fireEvent('incidentsDownloaded');
     };
+
     xhr.onerror = function(e) { logServerError(e); };
+
     xhr.send();
   }
 
@@ -345,7 +423,22 @@
     Ti.API.debug('database.js::testDatabase: flushed settings, recieved test='+result);
 
     // g/s category
+    MarchHare.database.flushCategories();
+    MarchHare.database.flushIncidentCategories();
     MarchHare.database.initializeCategories();
+
+    Titanium.App.addEventListener('categoriesDownloaded',
+                testDatabaseCategoriesInit);
+
+    // g/s incidents
+    MarchHare.database.flushIncidents();
+    MarchHare.database.initializeIncidents();
+    Titanium.App.addEventListener('incidentsDownloaded',
+                testDatabaseIncidentsInit);
+
+  }
+
+  function testDatabaseCategoriesInit() {
     Ti.API.debug('database.js::testDatabase: initialized categories');
     query = 'SELECT * from categories';
     result = db.execute(query);
@@ -356,17 +449,17 @@
       result.next();
     }
     result.close();
+  }
 
-    // g/s incidents
-    MarchHare.database.initializeIncidents();
+  function testDatabaseIncidentsInit() {
     result = JSON.parse(MarchHare.database.getIncidentsJSON());
     Ti.API.debug('database.js::testDatabase: intialized incidents:');
     for (i in result) {
       var output = 'incidents.id='+result[i].incident.incidentid+', '+
-        'incidents.title='+result[i].incident.incidenttitle +', icons= '+
-        JSON.stringify(result[i].icon);
+        'incidents.title='+result[i].incident.incidenttitle +', icons= '+        JSON.stringify(result[i].icon);
       Ti.API.debug(output);
     }
+
   }
 
 })();
