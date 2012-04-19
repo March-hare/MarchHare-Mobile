@@ -101,52 +101,51 @@
         MarchHare.settings.action_domain.default_value)+
         '/api/?task=decayimagecategories';
 
-    var xhr = Ti.Network.createHTTPClient({
-      onload: function(){
-        Ti.API.debug("GET "+url+' response: '+ this.responseText);
-        var categories = JSON.parse(this.responseText);
-        var i;
 
-        // Get the categories from the server and insert any new ones 
-        if (
-          typeof categories != 'undefined' &&
-          typeof categories.payload != 'undefined' &&
-          typeof categories.payload.categories != 'undefined' &&
-          categories.payload.categories instanceof Array &&
-          typeof categories.payload.decayimage_default_icon != 'undefined'
-        ) {
-          for (i in categories.payload.categories) {
-            MarchHare.database.setCategory(categories.payload.categories[i].category);
-          };
+    // TODO: start an indicator
+    var t = setInterval(function() {
 
-          // Get the default decayimage
-          MarchHare.database.setSetting('decayimage_default_icon', 
-            categories.payload.decayimage_default_icon);
-        }
-        else {
-          Ti.API.error('InitializeCategories: We recieved an invalid response '+
-            'from the server: '+ JSON.stringify(categories));
-        }
-        Ti.App.fireEvent('categoriesDownloaded');
+      // If we cant set the semaphore then we do not have access to the HTTP 
+      // Client yet.
+      if (!MarchHare.xhrGetSemaphore()) {
+        Ti.API.info('Delaying categories request because the HTTP Client is in use.');
+        return;
+      }
 
-      },
-      onerror: function(e) {
-        // TODO: we want to notify the user somehow, but we dont want to 
-        // send an alert for each failure.  Maybe we can store the error 
-        // statistics somehow and display them to the user in a menu somewhere
-        Ti.API.debug("STATUS: " + this.status);
-        Ti.API.debug("TEXT: " + this.responseText);
-        Ti.API.debug("ERROR: " + e.error);
-        Ti.API.error('Unable to get json from: '+ url);
-      },
-      timeout: 5000
-    });
-   
-    // Get the categories from the server 
-    xhr.open("GET", url);
-    xhr.send();
+      MarchHare.xhrProcess({
+        url: url,
+        onload: MarchHare.database.handleServerResponseCategories
+      });
 
-    // TODO: pull down all the category icons and decayimages for local storage
+      clearInterval(t);
+    }, 100);
+  }
+
+  MarchHare.database.handleServerResponseCategories = function(response) {
+    var categories = JSON.parse(response);
+    var i;
+
+    // Get the categories from the server and insert any new ones 
+    if (
+      typeof categories != 'undefined' &&
+      typeof categories.payload != 'undefined' &&
+      typeof categories.payload.categories != 'undefined' &&
+      categories.payload.categories instanceof Array &&
+      typeof categories.payload.decayimage_default_icon != 'undefined'
+    ) {
+      for (i in categories.payload.categories) {
+        MarchHare.database.setCategory(categories.payload.categories[i].category);
+      };
+
+      // Get the default decayimage
+      MarchHare.database.setSetting('decayimage_default_icon', 
+        categories.payload.decayimage_default_icon);
+    }
+    else {
+      Ti.API.error('InitializeCategories: We recieved an invalid response '+
+        'from the server: '+ JSON.stringify(categories));
+    }
+    Ti.App.fireEvent('categoriesDownloaded');
   };
 
   MarchHare.database.flushCategories = function() {
@@ -348,20 +347,28 @@
         '/api/?task=decayimage';
 
     // TODO: start an indicator
-    var xhr = Ti.Network.createHTTPClient();
-    xhr.timeout = 5000;
-    xhr.open("GET", url);
-    xhr.onload = function() { 
-      handleServerResponse(this.responseText);
-      Ti.App.fireEvent('incidentsDownloaded');
-    };
+    var t = setInterval(function() {
 
-    xhr.onerror = function(e) { logServerError(e); };
+      // If we cant set the semaphore then we do not have access to the HTTP 
+      // Client yet.
+      if (!MarchHare.xhrGetSemaphore()) {
+        Ti.API.info('Delaying reports request because the HTTP Client is in use.');
+        return;
+      }
 
-    xhr.send();
+      MarchHare.xhrProcess({
+        url: url,
+        onload: function(response) { 
+          handleServerResponse(response);
+          Ti.App.fireEvent('incidentsDownloaded');
+        }
+      });
+
+      clearInterval(t);
+    }, 100);
   }
 
-  function handleServerResponse(response) {
+  MarchHare.database.handleServerResponseIncidents = function(response) {
     var jNewIncidents = JSON.parse(response);
     var newIncidents = false;
 
@@ -395,16 +402,6 @@
     if (!newIncidents) {
       Ti.API.debug('nitializeIncidents: did not recieve any reports');
     }
-  }
-
-  function logServerError(e) {
-    // TODO: we want to notify the user somehow, but we dont want to 
-    // send an alert for each failure.  Maybe we can store the error 
-    // statistics somehow and display them to the user in a menu somewhere
-    Ti.API.debug("STATUS: " + this.status);
-    Ti.API.debug("TEXT: " + this.responseText);
-    Ti.API.debug("ERROR: " + e.error);
-    Ti.API.error('Unable to get json from: '+ url);
   }
 
   // This will perform some tests on the database and log the results.  The 
