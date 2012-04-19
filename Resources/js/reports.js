@@ -288,65 +288,84 @@
     // Return
     return map;
   }
-    
-  function addFeatureSelectionEvents(map, layer) {
-    var selectedFeature = null;
-    selectControl = new OpenLayers.Control.SelectFeature(layer);
-    map.addControl(selectControl);
-    selectControl.activate();
-    layer.events.on({
-      "featureselected": function(event) {
-        selectedFeature = event.feature;
-        zoom_point = event.feature.geometry.getBounds().getCenterLonLat();
-        lon = zoom_point.lon;
-        lat = zoom_point.lat;
-        
-        var content = "<div class=\"infowindow\">" + event.feature.attributes.title;
-        var body = event.feature.attributes.body.slice(0,130);
-        if (body.length == 130) {
-          body += '...';
-        }
-
-        content += "<div class=\"infowindow_content\"><div class=\"infowindow_list\">"+body+"</div>";
-        content += "\n<div class=\"infowindow_meta\">";
-        content += "<a href='javascript:zoomToSelectedFeature("+ lon + ","+ lat +",1)'>";
-        content += "Zoom in</a>";
-        content += "&nbsp;&nbsp;|&nbsp;&nbsp;";
-        content += "<a href='javascript:zoomToSelectedFeature("+ lon + ","+ lat +",-1)'>";
-        content += "Zoom out</a></div>";
-        content += "</div><div style=\"clear:both;\"></div></div>";		
-
-        if (content.search("<script") != -1)
-        {
-          content = "Content contained Javascript! Escaped content below.<br />" + content.replace(/</g, "&lt;");
-        }
-              
-        // Destroy existing popups before opening a new one
-        if (event.feature.popup != null)
-        {
-          map.removePopup(event.feature.popup);
-        }
-        
-        popup = new OpenLayers.Popup.FramedCloud("chicken", 
-          event.feature.geometry.getBounds().getCenterLonLat(),
-          new OpenLayers.Size(100,100),
-          content,
-          null, true, onPopupClose);
-
-        event.feature.popup = popup;
-        map.addPopup(popup);
-      },
-      "featureunselected": function(event) {
-        // Safety check
-        if (event.feature.popup != null)
-        {
-          map.removePopup(event.feature.popup);
-          event.feature.popup.destroy();
-          event.feature.popup = null;
+   
+function addFeatureSelectionEvents(map, layer) {
+  var selectedFeature = null;
+  selectControl = new OpenLayers.Control.SelectFeature(layer);
+  map.addControl(selectControl);
+  selectControl.activate();
+  layer.events.on({
+    "featureselected": function(event) {
+      selectedFeature = event.feature;
+      zoom_point = event.feature.geometry.getBounds().getCenterLonLat();
+      lon = zoom_point.lon;
+      lat = zoom_point.lat;
+      
+      var thumb = "<div class=\"infowindow_image\">";
+      if ( typeof(event.feature.attributes.icon) != 'undefined' && 
+        (event.feature.attributes.icon instanceof Array))
+      {
+        for (i in event.feature.attributes.icon) {
+          thumb += "<img src=\""+
+            event.feature.attributes.icon[i]
+            +"\" />";
         }
       }
-    });
-  }
+      thumb += "</div>";
+
+      // TODO: a link here could fire an event that switches windows to a 
+      // report window.  
+      var content = "<div class=\"infowindow\">";
+
+      content += "<div class=\"infowindow_list\">"+
+        event.feature.attributes.name+
+        "</div>"+thumb;
+
+      content += "<div class=\"infowindow_content\">";
+      content += "\n<div class=\"infowindow_meta\">";
+      content += event.feature.attributes.description;
+      // Zoom is currently not working, commenting this out until we have
+      // time to add this feature
+      /*
+      content += "<a href='javascript:zoomToSelectedFeature("+ lon + ","+ lat +",1)'>";
+      content += "Zoom in</a>";
+      content += "&nbsp;&nbsp;|&nbsp;&nbsp;";
+      content += "<a href='javascript:zoomToSelectedFeature("+ lon + ","+ lat +",-1)'>";
+      content += "Zoom out</a></div>";
+      */
+      content += "</div><div style=\"clear:both;\"></div></div>";		
+
+      if (content.search("<script") != -1)
+      {
+        content = "Content contained Javascript! Escaped content below.<br />" + content.replace(/</g, "&lt;");
+      }
+            
+      // Destroy existing popups before opening a new one
+      if (event.feature.popup != null)
+      {
+        map.removePopup(event.feature.popup);
+      }
+      
+      popup = new OpenLayers.Popup.FramedCloud("chicken", 
+        event.feature.geometry.getBounds().getCenterLonLat(),
+        new OpenLayers.Size(100,100),
+        content,
+        null, true, onPopupClose);
+
+      event.feature.popup = popup;
+      map.addPopup(popup);
+    },
+    "featureunselected": function(event) {
+      // Safety check
+      if (event.feature.popup != null)
+      {
+        map.removePopup(event.feature.popup);
+        event.feature.popup.destroy();
+        event.feature.popup = null;
+      }
+    }
+  });
+}
 
   /**
    * Close Popup
