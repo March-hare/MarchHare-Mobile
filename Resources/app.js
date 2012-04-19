@@ -1,4 +1,5 @@
 var DEV = true;
+Ti.App.Properties.setBool('map_initialized', false);
 
 // this sets the background color of the master UIView (when there are no windows/tab groups on it)
 Titanium.UI.setBackgroundColor('#000');
@@ -8,10 +9,14 @@ Ti.include(
     'march-hare/march-hare.js',
     'windows/Settings.js',
     'windows/Map.js',
-    'windows/Reports.js'
+    'windows/Reports.js',
+    'march-hare/database.js'
     );
 
+//MarchHare.database.testDatabase();
+
 var reportsInitialized = false;
+
 var win = MarchHare.ui.createMapWindow();
 win.open();
 
@@ -20,13 +25,33 @@ setInterval(updateGeoLocation, 1*60*1000 /* minutes * seconds * milliseconds */)
 
 // The benefit of polling for reports in the main code is so that we can trigger
 // phone based events like alerts if the incident list changes
-if (DEV) {
-  Ti.App.Properties.setString('incidents', '{}');
+if (DEV) { 
+  Ti.App.Properties.setString('lastpoll', '1970-01-01');
+  MarchHare.database.flushIncidents(); 
+  MarchHare.database.flushIncidentCategories(); 
+  MarchHare.database.flushCategories(); 
 }
-pollForReports();
-setInterval(pollForReports, 
+MarchHare.database.initializeCategories();
+
+// TODO: in testing I have noticed that this completes before the MapWindow is 
+// open with the defaut poll interval (30 s) this does not matter much if we do 
+// not call pollReports() till after the interval, but if the user sets a longer
+// poll interval it will wait that long before maps show up. The readyForReports
+// event is only fired in js/reports.js after the map settings are recieved. 
+// This is a good time to call pollForReports for the intial report list.  There
+// is the possibility that the poll value could be set so fast (=~10s) that it 
+// would be called before or during the initial pollForReports
+Ti.App.addEventListener('readyForReports', function() {
+  pollForReports();
+});
+
+Ti.App.addEventListener('mapInitialized', function() {
+  Ti.API.debug('mapInitialized event recieved');
+  Ti.App.Properties.setBool('map_initialized', true);
+  setInterval(pollForReports, 
     Ti.App.Properties.getString('poll', MarchHare.settings.poll.default_value) 
     *1000 /* seconds * milliseconds */);
+});
 
 function updateGeoLocation() {
   // Titanium.Geolocation.getCurrentPosition: http://bit.ly/GEe76Q
@@ -49,174 +74,110 @@ function updateGeoLocation() {
 }
 
 function pollForReports() {
+
+  var lastpoll = Ti.App.Properties.getString('lastpoll', '1970-01-01');
   var url = 'http://'+ 
       Ti.App.Properties.getString('action_domain',
       MarchHare.settings.action_domain.default_value)+
-      '/decayimage/json';
+      '/api/?task=decayimage&by=sincedate&date='+lastpoll;
 
-  var incidents = 
-    Ti.App.Properties.getString('incidents',
-      MarchHare.settings.incidents.default_value);
-  var jIncidents = JSON.parse(incidents);
-
-  // Pulled from example here: http://bit.ly/n5YWdz
-  var xhr = Ti.Network.createHTTPClient({
-    onload: function(){
-      var jNewIncidents = JSON.parse(this.responseText);
-      var result = compareIncidents(incidents, jNewIncidents);
-      if (result.result) {
-         Ti.App.Properties.setString('incidents', JSON.stringify(result.merged));
-         Ti.API.debug('pollReports: firing updateReports event');
-         Ti.App.fireEvent('updateReports', Ti.App.Properties.getString('incidents'));
-         if (!reportsInitialized) {
-           reportsInitialized = true;
-         }
-      } else {
-        Ti.API.debug('pollReports: not updating because we did not recieve any new reports');
-      }
-    },
-    onerror: function(e) {
-      // TODO: we want to notify the user somehow, but we dont want to 
-      // send an alert for each failure.  Maybe we can store the error 
-      // statistics somehow and display them to the user in a menu somewhere
-      Ti.API.debug("STATUS: " + this.status);
-      Ti.API.debug("TEXT: " + this.responseText);
-      Ti.API.debug("ERROR: " + e.error);
-      Ti.API.error('Unable to get json from: '+ url);
-    },
-    timeout: 5000
-  });
-  
+  // TODO: start an indicator
+  var xhr = Ti.Network.createHTTPClient();
+  xhr.timeout = 5000;
   xhr.open("GET", url);
+  Ti.API.debug('pollForReports url: '+ url);
+  xhr.onload = function() { handleServerResponse(this.responseText); }
+  xhr.onerror = function(e) { logServerError(e, url); }
   xhr.send();
 }
 
-// Compare two category objects to see if new categories have been added
-function compareCategories(oldCat, newCat) {
-  var result = {
-    result: false,
-    message: []
-  };
-
-  // Loop through the new categories and index them by id
-  var newCatById = {};
-  for (var i = 0; i < newCat.length; i++) {
-    newCatById[newCat[i].id] = newCat[i];
-  }
-  delete newCat;
-
-  // Now its easier to compare them
-  for (i in oldCat) {
-    if (!i in newCatById) {
-      result.result = true;
-      result.message.push('Category '+oldCat.category_title+' removed');
-      // Objects are passed by reference
-      delete oldCat.i;
-    }
-    delete newCatById.i;
-  }
-
-  // Any newCat categories that are left over here should be added to oldCat
-  var added = newCatById.length;
-  for (i in newCatbyId) {
-    result.result=true;
-    result.message.push('Added category '+newCatById+' category');
-    // Objects are passed by reference
-    oldCat[i] = newCatbyId.i;
-  }
-
-  return result;
-}
-
-// Compare two locations to see if it changed
-function compareLocations(oldLocation, newLocation) {
-  var result = {
-    result: false,
-    message: ''
-  };
+function handleServerResponse(response) {
+  var jNewIncidents = JSON.parse(response);
+  var newIncidents = false;
+  var initialized = Ti.App.Properties.getBool('map_initialized', false);
+  var error = false;
 
   if (
-    (oldLocation[0] != newLocation[0]) ||
-    (oldLocation[1] != newLocation[0]) 
-   ){
-    oldLocation = newLocation;
-    result.result = true;
-    result.message = 'Location was updated';
+    typeof jNewIncidents == 'undefined' ||
+    typeof jNewIncidents.payload == 'undefined' ||
+    typeof jNewIncidents.payload.incidents == 'undefined' ||
+    !(jNewIncidents.payload.incidents instanceof Array)
+    ) {
+
+    // It may just be the case that we have not recieved any data back 
+    // from our request
+    if (
+      typeof jNewIncidents.error.code != 'undefined' && 
+      (jNewIncidents.error.code == "007") && 
+      typeof jNewIncidents.error.message != 'undefined'
+    ) {
+      Ti.API.info('pollReports: '+ jNewIncidents.error.message);
+      Ti.App.Properties.setString('lastpoll', new Date().toISOString());
+    }
+    else {
+      Ti.API.error('pollReports: recieved invalid json from the server: '+
+        JSON.stringify(jNewIncidents));
+      error = true;
+    }
+  } else {
+
+    // TODO: this finishes before the settings are sent to the map, so it does
+    // not actually load until after the next poll
+    for ( var i  in jNewIncidents.payload.incidents) {
+      newIncidents = true;
+      var incident = {
+        incident: {
+          incidentid: jNewIncidents.payload.incidents[i].incident.incidentid,
+          incidenttitle: jNewIncidents.payload.incidents[i].incident.incidenttitle,
+          incidentdescription: jNewIncidents.payload.incidents[i].incident.incidentdescription,
+          incidentdate: jNewIncidents.payload.incidents[i].incident.incidentdate,
+          incidentlatitude: jNewIncidents.payload.incidents[i].incident.locationlatitude,
+          incidentlongitude: jNewIncidents.payload.incidents[i].incident.locationlongitude,
+          incidenthasended: jNewIncidents.payload.incidents[i].incident.incidenthasended,
+        },
+        categories: jNewIncidents.payload.incidents[i].categories
+      };
+
+      if (MarchHare.database.getIncidentJSON(incident)) {
+        MarchHare.database.updateIncident(incident);
+      } else {
+        MarchHare.database.setIncident(incident);
+      }
+    }
   }
 
-  return result;
+  if (newIncidents || !initialized) {
+    Ti.API.debug('pollReports: firing updateReports event, map_initialized: '+
+      initialized +', newIncidents: '+ newIncidents);
+    result = MarchHare.database.getIncidentsJSON();
+
+    // Get the default decay image from the local database
+    decayimageIcon = MarchHare.database.getSetting('decayimage_default_icon');
+
+    // If the default decay image icon is not set then change it to the default
+    decayimageIcon = (decayimageIcon) ? decayimageIcon :
+      'http://'+ 
+      Ti.App.Properties.getString('action_domain',
+        MarchHare.settings.action_domain.default_value)+
+      '/plugins/decayimage/images/Question_icon_thumb.png';
+
+    Ti.App.fireEvent('updateReports', {incidents: result, icon: decayimageIcon});
+  } else {
+    Ti.API.debug('pollReports: not updating because we did not recieve any new reports');
+  }
+
+  if (!error) {
+    Ti.App.Properties.setString('lastpoll', new Date().toISOString());
+  }
+
 }
 
-
-// TODO: Incidents really should be in a database
-function compareIncidents(oldIncidents, newIncidents) {
-  var result = {
-    result: false,
-    message: '',
-    removed: [],
-    added: [],
-    merged: {}
-  };
-
-  Ti.API.debug("compareIncidents oldIncidents: "+
-    'old: '+ JSON.stringify(oldIncidents)+
-    'new: '+ JSON.stringify(newIncidents));
-
-  // Sanity check
-  if ((newIncidents.type != "FeatureCollection")) {
-    Ti.API.error("compareIncidents recieved an invalid incident "+
-      'new: '+ JSON.stringify(newIncidents));
-  }
-
-  // Loop through the new incidents and index them by id
-  var newIncidentsById = {};
-  for (i = 0; i < newIncidents.features.length; i++) {
-    newIncidentsById[newIncidents.features[i].properties.id] = 
-      newIncidents.features[i];
-  }
-  delete newIncidents;
-  Ti.API.debug("compareIncidents newIncidentsById: "+ 
-    JSON.stringify(newIncidentsById));
-
-  // Now its easier to compare them
-  for (i in oldIncidents) {
-    // If the index does not exist in newIncidentsById then it was deleted
-    if (!(i in newIncidentsById)) {
-      result.result = true;
-      result.removed.push(oldIncidents.i);
-      delete oldIncidents.i;
-      continue;
-    }
-
-    // If it does exist check if the categories have changed
-    // cannot read property category
-    var r = compareCategories(oldIncidents.i.category, newIncidentsById.i.category);
-    if (r.result) {
-      result.result = true;
-      oldIncidents.i.read = false;
-      result.message.push(r.message);
-    }
-
-    // Check if the location has changed
-    r = compareLocations(
-        oldIncidents.i.geometry.coordinates, newIncidentsById.i.geometry.coordinates);
-    if (r.result) {
-      result.result = true;
-      oldIncidents.i.read = false;
-      result.message.push(r.message);
-    }
-
-    //  We remove this id from newIncidentsById so we can track newly added incidents
-    delete newIncidentsById.i;
-  }
-
-  for (i in newIncidentsById) {
-    result.result = true;
-    result.message.push('Added report: '+ newIncidentsById.i.properties.title);
-    oldIncidents[i] = newIncidentsById.i;
-    oldIncidents.i.read = false;
-    delete newIncidentsById.i;
-  }
-
-  return result;
+function logServerError(e, url) {
+  // TODO: we want to notify the user somehow, but we dont want to 
+  // send an alert for each failure.  Maybe we can store the error 
+  // statistics somehow and display them to the user in a menu somewhere
+  Ti.API.debug("STATUS: " + this.status);
+  Ti.API.debug("TEXT: " + this.responseText);
+  Ti.API.debug("ERROR: " + e.error);
+  Ti.API.error('Unable to get json from: '+ url);
 }

@@ -1,6 +1,7 @@
 Ti.include( 
     '../march-hare/march-hare.js',
-    '../windows/Settings.js'
+    '../windows/Settings.js',
+    '../windows/Reports.js'
     );
 
 // Add application settings menu to the main mapping window 
@@ -14,12 +15,12 @@ if (Ti.Platform.osname == 'android') {
     var menuItem = menu.add({ title: 'Settings' });
     menuItem.addEventListener("click", function(){
       var settingsWin = MarchHare.ui.createSettingsWindow();
-      settingsWin.open({fullscreen:true});
+      settingsWin.open({});
     });
     menuItem = menu.add({ title: 'Reports' });
     menuItem.addEventListener("click", function(){
       var reportsWin = MarchHare.ui.createReportsWindow();
-      settingsWin.open({fullscreen:true});
+      reportsWin.open({fullscreen:true});
     });
   };
 } 

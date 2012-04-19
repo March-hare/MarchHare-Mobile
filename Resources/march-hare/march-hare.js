@@ -1,6 +1,7 @@
 // TODO: i18n inegration
 var MarchHare = {
   ui: {},
+  database: {},
   settings: {
     action_domain: {
       title: 'Action Domain',
@@ -29,12 +30,6 @@ var MarchHare = {
       default_value: '15',
       // TODO: figure out if this can actually handle a geo position
       func: Ti.App.Properties.setInt, 
-      verify: function(){}
-    },
-    incidents: {
-      title: 'Current Incidents',
-      default_value: '{}',
-      func: Ti.App.Properties.setString, 
       verify: function(){}
     },
     poll: {
