@@ -153,8 +153,12 @@
 
       // create a feature vector from the point and style
       var feature = new OpenLayers.Feature.Vector(incidentPoint, null, newIncidentStyle);
-      // TODO: what are we doing here?  What are the attributes used for?
-      feature.attributes = incidents[i];
+      // The attributes used for the info window popup.  See js/map_common.js
+      feature.attributes = {
+        name: incidents[i].incident.incidenttitle,
+        description: incidents[i].incident.incidentdescription.substr(0, 130),
+        icon: incidents[i].icon
+      };
       vLayer.addFeatures([feature]);
 
       var offsetRadius = reportStyle.pointRadius+iconStyle.graphicHeight/2;

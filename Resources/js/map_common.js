@@ -85,23 +85,25 @@ function addFeatureSelectionEvents(map, layer) {
       lon = zoom_point.lon;
       lat = zoom_point.lat;
       
-      var thumb = "";
-      if ( typeof(event.feature.attributes.thumb) != 'undefined' && 
-        event.feature.attributes.thumb != '')
+      var thumb = "<div class=\"infowindow_image\">";
+      if ( typeof(event.feature.attributes.icon) != 'undefined' && 
+        (event.feature.attributes.icon instanceof Array))
       {
-        thumb = "<div class=\"infowindow_image\"><a href='"+event.feature.attributes.link+"'>";
-        thumb += "<img src=\""+event.feature.attributes.thumb+"\" height=\"59\" width=\"89\" /></a></div>";
+        for (i in event.feature.attributes.icon) {
+          thumb += "<img src=\""+
+            event.feature.attributes.icon[i]
+            +"\" height=\"59\" width=\"89\" />";
+        }
       }
+      thumb += "</div>";
 
-      var content = "<div class=\"infowindow\">" + thumb;
+      // TODO: a link here could fire an event that switches windows to a 
+      // report window.  
+      var content = "<div class=\"infowindow\">" +event.feature.attributes.name+ 
+        "<br />"+ thumb;
       content += "<div class=\"infowindow_content\"><div class=\"infowindow_list\">"+event.feature.attributes.name+"</div>";
       content += "\n<div class=\"infowindow_meta\">";
-      if ( typeof(event.feature.attributes.link) != 'undefined' &&
-        event.feature.attributes.link != '')
-      {
-        content += "<a href='"+event.feature.attributes.link+"'>More information</a><br/>";
-      }
-      
+      content += event.feature.attributes.description+ 
       content += "<a href='javascript:zoomToSelectedFeature("+ lon + ","+ lat +",1)'>";
       content += "Zoom in</a>";
       content += "&nbsp;&nbsp;|&nbsp;&nbsp;";
