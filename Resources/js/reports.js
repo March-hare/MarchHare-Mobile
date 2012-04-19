@@ -5,6 +5,8 @@
   var incidentUrl = null;
   var pollSeconds = null;
   var map = null;
+  var proj_4326 = new OpenLayers.Projection('EPSG:4326');
+  var proj_900913 = new OpenLayers.Projection('EPSG:900913');
 
   // When the mobile app window is loaded, not to be confused with jQuery's
   // $(document).ready, This will likely be called before $(document).ready
@@ -19,9 +21,12 @@
         {minSize: new OpenLayers.Size(573, 366)}) );
 
       Ti.App.addEventListener('newSettingsAvailable', newSettingsAvailable);
-      Ti.App.addEventListener('updateReports', showIncidentMap);
-      Titanium.App.addEventListener('updateGeolocation', 
+      Ti.App.addEventListener('updateReports', function(dictionary) {
+        showIncidentMap(dictionary.incidents, dictionary.icon);
+      });
+      Ti.App.addEventListener('updateGeolocation', 
         handleUpdateGeolocation);
+      Ti.App.fireEvent('readyForReports');
     });
   }
   
@@ -74,8 +79,9 @@
    * Handles display of the incidents current incidents on the map
    * This method is only called when the map view is selected
    */
-  function showIncidentMap (incidents) {
-    Ti.API.debug('showIncidentMap called with incidents: '+JSON.stringify(incidents));
+  function showIncidentMap (incidents, decayimageIcon) {
+
+    incidents = JSON.parse(incidents);
 
     // Set the layer name
     var layerName = "Reports";
@@ -83,7 +89,7 @@
     // Get all current layers with the same name and remove them from the map
     currentLayers = map.getLayersByName(layerName);
     // TODO: I am not really sure if this is needed
-    currentLayersIcons = map.getLayersByName(layerName + 'Category Icons');
+    currentLayersIcons = map.getLayersByName(layerName + ' Category Icons');
     for (var i = 0; i < currentLayers.length; i++)
     {
       map.removeLayer(currentLayers[i]);
@@ -126,67 +132,56 @@
         
     var aFeatures = new Array();
 
-    $.each(incidents.features, function(key, val) {
+    for (i in incidents) {
+
       // create a point from the latlon
       var incidentPoint = new OpenLayers.Geometry.Point(
-        val.geometry.coordinates[0],
-        val.geometry.coordinates[1]
+        incidents[i].incident.locationlongitude,
+        incidents[i].incident.locationlatitude
       );
+
       var proj = new OpenLayers.Projection("EPSG:4326");
       incidentPoint.transform(proj, map.getProjectionObject());
 
       // If the incident has ended but it is configured to "decay" we should
       // set the incident icon to the decayimage default icon
       var newIncidentStyle =  OpenLayers.Util.extend({}, reportStyle);
-      if (val.incidentHasEnded == 1) {
-        newIncidentStyle.externalGraphic = incidents.decayimage_default_icon;
+
+      if (incidents[i].incident.incidenthasended == 1) {
+        newIncidentStyle.externalGraphic = decayimageIcon;
       }
 
       // create a feature vector from the point and style
       var feature = new OpenLayers.Feature.Vector(incidentPoint, null, newIncidentStyle);
-      feature.attributes = val.properties;
+      // TODO: what are we doing here?  What are the attributes used for?
+      feature.attributes = incidents[i];
       vLayer.addFeatures([feature]);
 
       var offsetRadius = reportStyle.pointRadius+iconStyle.graphicHeight/2;
-      // if the icon is set then apply it (this requires controller mod)
-      // else if icon is an array, then place the icons around the incident
-      if (val.properties.icon instanceof Array) {
-        var numIcons = val.properties.icon.length;
-        var iconCt = 1;
-        // Loop over each icon setting externalGraphic and x,y offsets
-        $.each(val.properties.icon, function(index, icon) {
-          
-          var newIconStyle =  OpenLayers.Util.extend({}, iconStyle);
-          // TODO: make sure we are using the decayimage category icons if they
-          // are set.  I think this should be transparently set by the json 
-          // controller anyhow.
-          newIconStyle.externalGraphic = icon;
-          // TODO: -13 is a magic number here that got this working.
-          // I dont totally understant what its related to.
-          // pointRadius + strokeWidth + 2FunPixels?
-          newIconStyle.graphicXOffset = -13+
-            offsetRadius*Math.cos(((2*3.14)/(numIcons))*index);
-          newIconStyle.graphicYOffset = -13+
-            offsetRadius*Math.sin(((2*3.14)/(numIcons))*index);
+      var numIcons = incidents[i].icon.length;
+      var iconCt = 1;
 
-          iconPoint = incidentPoint.clone();
-          var feature = new OpenLayers.Feature.Vector(
-            iconPoint, null, newIconStyle);
-          vLayerIcons.addFeatures([feature]);
-        });
-      }
-      // If icon is a single value (this is the protocol default)
-      else if (val.properties.icon) {
-        iconStyle.externalGraphic = val.properties.icon;
-        iconStyle.graphicYOffset = offsetRadius;
+      // Loop over each icon setting externalGraphic and x,y offsets
+      $.each(incidents[i].icon, function(index, icon) {
+        
+        var newIconStyle =  OpenLayers.Util.extend({}, iconStyle);
+        newIconStyle.externalGraphic = icon;
 
-        // create a feature vector from the point and style
-        var feature = new OpenLayers.Feature.Vector(incidentPoint, null, reportStyle);
+        // TODO: -13 is a magic number here that got this working.
+        // I dont totally understant what its related to.
+        // pointRadius + strokeWidth + 2FunPixels?
+        newIconStyle.graphicXOffset = -13+
+          offsetRadius*Math.cos(((2*3.14)/(numIcons))*index);
+        newIconStyle.graphicYOffset = -13+
+          offsetRadius*Math.sin(((2*3.14)/(numIcons))*index);
+
+        iconPoint = incidentPoint.clone();
+        var feature = new OpenLayers.Feature.Vector(
+          iconPoint, null, newIconStyle);
         vLayerIcons.addFeatures([feature]);
-      }
+      });
 
-      // TODO: if decayed add a transparent decay icon over top
-    });
+    }
 
     // Add the vector layer to the map
     map.addLayer(vLayer);
@@ -194,5 +189,167 @@
 
     // Add feature selection events
     addFeatureSelectionEvents(map, vLayer);
+
+    Ti.App.fireEvent('mapInitialized');
+  };
+
+  /**
+   * Zoom to Selected Feature from within Popup
+   */
+  function zoomToSelectedFeature(lon, lat, zoomfactor)
+  {
+    var lonlat = new OpenLayers.LonLat(lon,lat);
+
+    // Get Current Zoom
+    currZoom = map.getZoom();
+    // New Zoom
+    newZoom = currZoom + zoomfactor;
+    // Center and Zoom
+    map.setCenter(lonlat, newZoom);
+    // Remove Popups
+    for (var i=0; i < map.popups.length; ++i)
+    {
+      map.removePopup(map.popups[i]);
+    }
+    onPopupClose(true);
+  }
+
+  /**
+   * Creates an returns a map object
+   * @param targetElement ID of the element to be used for creating the map
+   * @param options Options to be used for creating the map
+   */
+  function createMap(targetElement, lat, lon, zoomLevel, options)
+  {
+    if (typeof targetElement == 'undefined' || $("#"+targetElement) == null)
+    {
+      return;
+    }
+        
+    // To hold the map options
+    var mapOptions;
+    
+    if (typeof(options) == 'undefined')
+    {
+      // Create the default options
+      mapOptions = {
+        units: "mi",
+        numZoomLevels: 18,
+        theme: false,
+        controls:[],
+        projection: proj_900913,
+        'displayProjection': proj_4326
+      };
+    }
+    else
+    {
+      mapOptions = options;
+    }
+    
+    // Create the map object
+    var map = new OpenLayers.Map(targetElement, mapOptions);
+    
+    var osm_mapnik = new OpenLayers.Layer.OSM.Mapnik("OSM Mapnik", {
+      sphericalMercator: true,
+      maxExtent: new OpenLayers.Bounds(-20037508.34,-20037508.34,20037508.34,20037508.34)});
+
+    var osm_tah = new OpenLayers.Layer.OSM.Mapnik("OSM Tiles@Home", {
+      sphericalMercator: true,
+      maxExtent: new OpenLayers.Bounds(-20037508.34,-20037508.34,20037508.34,20037508.34)});
+
+    var osm_cycle = new OpenLayers.Layer.OSM.Mapnik("OSM Cycling Map", {
+      sphericalMercator: true,
+      maxExtent: new OpenLayers.Bounds(-20037508.34,-20037508.34,20037508.34,20037508.34)});
+    
+    // Add the default layers
+    map.addLayers([osm_mapnik, osm_tah, osm_cycle]);
+    
+    // Add controls
+    map.addControl(new OpenLayers.Control.Navigation());
+    map.addControl(new OpenLayers.Control.PanZoom());
+    map.addControl(new OpenLayers.Control.Attribution());
+    map.addControl(new OpenLayers.Control.MousePosition());
+    map.addControl(new OpenLayers.Control.LayerSwitcher());
+    
+    // Check for the zoom level
+    var zoom = (typeof zoomLevel == 'undefined' || zoomLevel < 1)? 9 : zoomLevel;
+    
+    // Create a lat/lon object and center the map
+    var myPoint = new OpenLayers.LonLat(lon, lat);
+    myPoint.transform(proj_4326, proj_900913);
+    
+    // Display the map centered on a latitude and longitude
+    map.setCenter(myPoint, zoom);
+    
+    // Return
+    return map;
+  }
+    
+  function addFeatureSelectionEvents(map, layer) {
+    var selectedFeature = null;
+    selectControl = new OpenLayers.Control.SelectFeature(layer);
+    map.addControl(selectControl);
+    selectControl.activate();
+    layer.events.on({
+      "featureselected": function(event) {
+        selectedFeature = event.feature;
+        zoom_point = event.feature.geometry.getBounds().getCenterLonLat();
+        lon = zoom_point.lon;
+        lat = zoom_point.lat;
+        
+        var content = "<div class=\"infowindow\">" + event.feature.attributes.title;
+        var body = event.feature.attributes.body.slice(0,130);
+        if (body.length == 130) {
+          body += '...';
+        }
+
+        content += "<div class=\"infowindow_content\"><div class=\"infowindow_list\">"+body+"</div>";
+        content += "\n<div class=\"infowindow_meta\">";
+        content += "<a href='javascript:zoomToSelectedFeature("+ lon + ","+ lat +",1)'>";
+        content += "Zoom in</a>";
+        content += "&nbsp;&nbsp;|&nbsp;&nbsp;";
+        content += "<a href='javascript:zoomToSelectedFeature("+ lon + ","+ lat +",-1)'>";
+        content += "Zoom out</a></div>";
+        content += "</div><div style=\"clear:both;\"></div></div>";		
+
+        if (content.search("<script") != -1)
+        {
+          content = "Content contained Javascript! Escaped content below.<br />" + content.replace(/</g, "&lt;");
+        }
+              
+        // Destroy existing popups before opening a new one
+        if (event.feature.popup != null)
+        {
+          map.removePopup(event.feature.popup);
+        }
+        
+        popup = new OpenLayers.Popup.FramedCloud("chicken", 
+          event.feature.geometry.getBounds().getCenterLonLat(),
+          new OpenLayers.Size(100,100),
+          content,
+          null, true, onPopupClose);
+
+        event.feature.popup = popup;
+        map.addPopup(popup);
+      },
+      "featureunselected": function(event) {
+        // Safety check
+        if (event.feature.popup != null)
+        {
+          map.removePopup(event.feature.popup);
+          event.feature.popup.destroy();
+          event.feature.popup = null;
+        }
+      }
+    });
+  }
+
+  /**
+   * Close Popup
+   */
+  function onPopupClose(event)
+  {
+    selectControl.unselect(selectedFeature);
+    selectedFeature = null;
   };
 })();
