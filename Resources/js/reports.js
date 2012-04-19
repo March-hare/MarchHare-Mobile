@@ -8,6 +8,11 @@
   var proj_4326 = new OpenLayers.Projection('EPSG:4326');
   var proj_900913 = new OpenLayers.Projection('EPSG:900913');
 
+  // Add the javascript swipe handlers
+  $("div#map").bind('swipeone', function() {
+    alert('swipeone event');
+  });
+
   // When the mobile app window is loaded, not to be confused with jQuery's
   // $(document).ready, This will likely be called before $(document).ready
   Ti.App.addEventListener('mapWindowLoaded', init);

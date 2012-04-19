@@ -4,8 +4,14 @@
 
     // TODO: The gestures below need to be supported
     // https://wiki.appcelerator.org/display/guides/Supporting+Gestures
+    
     // Swipes should move the map
+    // This is only available in iOS and is limited to left and right
     //webview.addListener('swipe', scrollMap(e));
+    
+    //webview.addListener('swipe', notice);
+    //webview.addListener('touchstart', notice_xy);
+    //webview.addListener('touchstop', notice_xy);
     
     // Pinches should zoom the map 
     // only supported in iOS in 1.8 of the API
@@ -42,4 +48,13 @@
 
     return win;
   }
+
+  notice_xy = function(e) {
+    alert('You touched');
+    Ti.API.debug('touch_xy: '+JSON.stringify(e));
+  };
+
+  notice = function(e) {
+    alert('You swiped to the '+ e.direction);
+  };
 })();
