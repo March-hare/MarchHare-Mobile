@@ -1,16 +1,26 @@
 (function () {
   MarchHare.ui.createSettingsWindow = function() {
-    var win = Ti.UI.createWindow({ modal: true });
-		var addSettingsView = Ti.UI.createView();
-		var container = Ti.UI.createView({layout:'vertical'});
+    var win = Ti.UI.createWindow({ 
+      backgroundColor: '#000',
+      title: 'Settings',
+      modal: true 
+    });
+
+		var domainView = Ti.UI.createView({
+      layout:'vertical',
+      top: 10,
+      left: 10,
+      width: 250,
+      height: 30
+    });
 
     // TODO: this should actually all be wrapped in a table with each setting 
     // that is not a checkbox diverted to its own modal window
     var domainLabel = Ti.UI.createLabel({ 
       text: 'Action Domain', 
       top: 0, left: 0,
-      color: '#000' });
-    container.add(domainLabel);
+      color: '#fff' });
+    domainView.add(domainLabel);
 
     // TODO: as we add more settings we will have different UI fields we will
     // want to use.  We will have to change this dependent on a new property
@@ -22,13 +32,21 @@
       autoCorrect: false,
       autocapitalization: Titanium.UI.TEXT_AUTOCAPITALIZATION_NONE
     });
-    container.add(domainField);
+    domainView.add(domainField);
+    win.add(domainView);
 
+		var pollView = Ti.UI.createView({
+      layout:'vertical',
+      top: 45,
+      left: 10,
+      width: 250,
+      height: 30
+    });
     var pollLabel = Ti.UI.createLabel({ 
       text: 'Poll Frequency in Seconds', 
         top: 20, left: 0,
-        color: '#000' });
-    container.add(pollLabel);
+        color: '#fff' });
+    pollView.add(pollLabel);
 
     var pollField = Ti.UI.createTextField( { 
       top:30, left:0, right:0,
@@ -37,8 +55,10 @@
       autoCorrect: false,
       autocapitalization: Titanium.UI.TEXT_AUTOCAPITALIZATION_NONE
     });
-    container.add(pollField);
+    pollView.add(pollField);
+    win.add(pollView);
 
+    /*
     var alert = Titanium.UI.createAlertDialog({
       title: 'Settings message'
     });
@@ -81,6 +101,7 @@
 
     addSettingsView.add(container);
     win.add(addSettingsView);
+    */
     return win;
   }
   
