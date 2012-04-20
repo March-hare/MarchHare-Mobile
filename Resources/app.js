@@ -22,7 +22,11 @@ var win = MarchHare.ui.createMapWindow();
 win.open();
 
 // We dont have any control over how frequently the actual device polls.
-setInterval(updateGeoLocation, 1*60*1000 /* minutes * seconds * milliseconds */);
+if (Ti.App.Properties.getBool('gpsFollow', 
+    March-Hare.settings.gpsFollow.default_value)) {
+  /* minutes * seconds * milliseconds */
+  setInterval(updateGeoLocation, 1*60*1000);
+}
 
 // The benefit of polling for reports in the main code is so that we can trigger
 // phone based events like alerts if the incident list changes

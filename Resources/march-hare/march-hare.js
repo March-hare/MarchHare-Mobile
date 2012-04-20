@@ -78,6 +78,10 @@ var MarchHare = {
       default_value: '30',
       func: Ti.App.Properties.setInt, 
       verify: function(){}
+    },
+    gpsFollow: {
+      title: 'Position map based on GPS',
+      default_value: 'false',
     }
   }
 };
