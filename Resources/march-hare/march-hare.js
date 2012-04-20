@@ -29,7 +29,7 @@ var MarchHare = {
     // semaphore here to make sure we only have one process ata a time.  It is 
     // expected that this function is called after the semaphore is obtained,
     // failure to do so will cause breakage!
-    MarchHare.xhr.setOnerror(function() {
+    MarchHare.xhr.setOnerror(function(e) {
       MarchHare.xhrLogServerError(e, parameters.url);
       MarchHare.xhrReleaseSemaphore();
     });
@@ -83,6 +83,7 @@ var MarchHare = {
 };
 
 MarchHare.xhr.setTimeout(5000);
+
 
 function verifyActionDomain(domain) {
   Ti.API.debug('verifyActionDomain domain: '+ domain);
