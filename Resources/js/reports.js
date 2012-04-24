@@ -2,8 +2,6 @@
   var latitude = null;
   var longitude = null;
   var defaultZoom = null;
-  var incidentUrl = null;
-  var pollSeconds = null;
   var map = null;
   var proj_4326 = new OpenLayers.Projection('EPSG:4326');
   var proj_900913 = new OpenLayers.Projection('EPSG:900913');
@@ -38,14 +36,12 @@
     latitude = settings.latitude;
     longitude = settings.longitude;
     defaultZoom = settings.zoom;
-    incidentUrl = 'http://' + settings.action_domain + '/decayimage/json?callback=?';
-    pollSeconds = settings.poll;
   }
 
   function handleUpdateGeolocation(location) {
     if (
-        (typeof(location.latitude) === 'undefined') ||
-        (typeof(location.longitude) === 'undefined') 
+        (typeof(location.lat) === 'undefined') ||
+        (typeof(location.lon) === 'undefined') 
        ) {
       Ti.API.debug('handleUpdateGeolocation did not recieve location info');
       return;
@@ -55,11 +51,9 @@
         +JSON.stringify(location));
 
     // check to see if it is different then the values we already have
-    if ( (latitude != location.latitude) || (longitude != location.longitude) ) {
-      latitude = location.latitude;
-      //Ti.App.Properties.setDouble("latitude", location.latitude);
-      longitude = location.longitude;
-      //Ti.App.Properties.setDouble("longitude", location.longitude);
+    if ( (latitude != location.lat) || (longitude != location.lon) ) {
+      latitude = location.lat;
+      longitude = location.lon;
 
       // Update the map position
       mapSetCenter();

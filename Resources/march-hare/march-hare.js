@@ -81,7 +81,7 @@ var MarchHare = {
     },
     gpsFollow: {
       title: 'Position map based on GPS',
-      default_value: 'false',
+      default_value: false,
     }
   }
 };
