@@ -297,7 +297,7 @@ div.olControlSaveFeaturesItemInactive {
     background-color: white;
     opacity: 0.50;
     font-size: 1px;
-    filter: alpha(opacity=50);
+    /* filter: alpha(opacity=50); */
 }
 .olHandlerBoxSelectFeature {
     border: 2px solid blue;
@@ -305,7 +305,7 @@ div.olControlSaveFeaturesItemInactive {
     background-color: white;
     opacity: 0.50;
     font-size: 1px;
-    filter: alpha(opacity=50);
+    /* filter: alpha(opacity=50); */
 }   
 
 .olControlPanPanel {
@@ -394,7 +394,7 @@ div.olControlSaveFeaturesItemInactive {
 .olImageLoadError {
     background-color: pink;
     opacity: 0.5;
-    filter: alpha(opacity=50); /* IE */
+    /* filter: alpha(opacity=50); */
 }
 
 /**
