@@ -1,8 +1,11 @@
 (function() {
-  var latitude = null;
-  var longitude = null;
+  // The default value is W. Lake and N Franklin, Chicago, IL
+  // http://www.getlatlon.com/
+  var latitude = 41.88566543221387;
+  var longitude = -87.63553619384766;
   var defaultZoom = null;
   var map = null;
+  var geolocate = null;
   var proj_4326 = new OpenLayers.Projection('EPSG:4326');
   var proj_900913 = new OpenLayers.Projection('EPSG:900913');
 
@@ -15,17 +18,67 @@
     updateSettings(settings);
     $(document).ready(function() {
       map = createMap('map', latitude, longitude, defaultZoom);
+
+      // The loading panel addon is not default enabled in a stock release of
+      // OpenLayers.  It needs to either get built in, or included seperately:
+      // http://trac.osgeo.org/openlayers/wiki/Addins/LoadingPanel
+      /*
       map.addControl( new OpenLayers.Control.LoadingPanel(
         {minSize: new OpenLayers.Size(573, 366)}) );
+      */
 
       Ti.App.addEventListener('newSettingsAvailable', newSettingsAvailable);
       Ti.App.addEventListener('updateReports', function(dictionary) {
         showIncidentMap(dictionary.incidents, dictionary.icon);
       });
-      Ti.App.addEventListener('updateGeolocation', 
-        handleUpdateGeolocation);
+      initGeolocation();
       Ti.App.fireEvent('readyForReports');
     });
+  }
+
+  function initGeolocation() {
+    var lVector = new OpenLayers.Layer.Vector('Current Location');
+    map.addLayers([lVector]);
+    geolocate = new OpenLayers.Control.Geolocate({
+      bind: false,
+      watch: true,
+      geolocationOptions: {
+        enableHighAccuracy: false,
+        maximumAge: 0,
+        // This may need to get fine tuned
+        timeout: 7000
+      }
+    });
+
+    map.addControl(geolocate);
+
+    geolocate.events.register("locationupdated",geolocate,function(e) {
+      Ti.API.debug('reports.js locationupdated: ' +JSON.stringify(e.point));
+      longitude = e.point.x;
+      latitude = e.point.y;
+      vector.removeAllFeatures();
+      vector.addFeatures([
+        new OpenLayers.Feature.Vector(
+            e.point,
+            {},
+            {
+                graphicName: 'cross',
+                strokeColor: '#f00',
+                strokeWidth: 2,
+                fillOpacity: 0,
+                pointRadius: 10
+            }
+        ),
+      ]);
+
+      mapSetCenter();
+    });
+
+    geolocate.events.register("locationfailed",this,function() {
+      alert('Location detection failed');
+    });
+
+    geolocate.activate();
   }
   
   function newSettingsAvailable(settings) {
@@ -33,31 +86,7 @@
   }
     
   function updateSettings(settings) {  
-    latitude = settings.latitude;
-    longitude = settings.longitude;
     defaultZoom = settings.zoom;
-  }
-
-  function handleUpdateGeolocation(location) {
-    if (
-        (typeof(location.lat) === 'undefined') ||
-        (typeof(location.lon) === 'undefined') 
-       ) {
-      Ti.API.debug('handleUpdateGeolocation did not recieve location info');
-      return;
-    } 
-
-    Ti.API.debug('reports.js handleUpdateGeolocation called with location: '
-        +JSON.stringify(location));
-
-    // check to see if it is different then the values we already have
-    if ( (latitude != location.lat) || (longitude != location.lon) ) {
-      latitude = location.lat;
-      longitude = location.lon;
-
-      // Update the map position
-      mapSetCenter();
-    }
   }
 
   function mapSetCenter() {
