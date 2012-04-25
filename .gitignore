@@ -1,2 +1,5 @@
 tmp
 .project
+build.log
+build/
+hs_err_pid19682.log
