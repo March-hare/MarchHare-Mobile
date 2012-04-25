@@ -81,6 +81,7 @@ Ti.App.addEventListener('pollIntervalChanged', function() {
 // We dont have any control over how frequently the actual device polls.
 Ti.Geolocation.purpose = "Positioning map based on your location (default:disabled)";
 Titanium.Geolocation.accuracy = Titanium.Geolocation.ACCURACY_LOW;
+Titanium.Geolocation.preferredProvider = Titanium.Geolocation.PROVIDER_GPS;
 
 // There are 80 meeters in one citry block, this means a person will have to move 
 // 3 city blocks before the map recenters.  On the default zoom level there are 
@@ -91,8 +92,11 @@ var gpsInterval;
 if (Ti.App.Properties.getBool('gpsFollow', 
     MarchHare.settings.gpsFollow.default_value)) {
   /* minutes * seconds * milliseconds */
-  Ti.API.debug('Scheduling location updates every '+ 1*60*1000 +' seconds');
-  gpsInterval = setInterval(updateGeoLocation, 1*60*1000);
+
+  // This does not seem to actuall get updated GPS info unfortunately
+  //Ti.API.debug('Scheduling location updates every '+ 1*60*1000 +' seconds');
+  //gpsInterval = setInterval(updateGeoLocation, 1*60*1000);
+  Titanium.Geolocation.addEventListener('location', updateGeoLocationHandler);
 }
 
 Ti.App.addEventListener('gpsFollowChanged', function() {
@@ -107,10 +111,6 @@ Ti.App.addEventListener('gpsFollowChanged', function() {
     clearInterval(gpsInterval);
   }
 });
-
-if (DEV) {
-  Titanium.Geolocation.addEventListener('location', updateGeoLocationHandler);
-}
 
 function updateGeoLocationHandler(location) {
   Ti.API.debug('app.js::updateGeoLocationHandler() location: '+ 
@@ -161,7 +161,8 @@ function updateGeoLocation() {
       return;
     }
  
-    Ti.API.debug('app.js::updateGeoLocation locatio: '+ JSON.stringify(location));
+    Ti.API.debug('app.js::updateGeoLocation location: '+ 
+      JSON.stringify(location.coords));
     // TODO: saving geo location on the device could be
     // a privacy concern.  Can we get around this?  For
     // now the way around this is to not turn on GPS follow
