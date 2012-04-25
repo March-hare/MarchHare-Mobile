@@ -2,11 +2,29 @@
   var latitude = null;
   var longitude = null;
   var defaultZoom = null;
-  var incidentUrl = null;
-  var pollSeconds = null;
   var map = null;
   var proj_4326 = new OpenLayers.Projection('EPSG:4326');
   var proj_900913 = new OpenLayers.Projection('EPSG:900913');
+  var proj = new OpenLayers.Projection("EPSG:4326");
+
+  // Default styling for the reports
+  var reportStyle = OpenLayers.Util.extend({}, 
+    OpenLayers.Feature.Vector.style["default"]);
+
+  reportStyle.pointRadius = 8;
+  reportStyle.fillColor = "#30E900";
+  reportStyle.fillOpacity = "0.8";
+  reportStyle.strokeColor = "#197700";
+  // Does this make the total point radius = 8+3/2?
+  reportStyle.strokeWidth = 3;
+  reportStyle.graphicZIndex = 2;
+
+  // Default style for the associated report category and location icons
+  var iconStyle =  OpenLayers.Util.extend({}, reportStyle);
+  iconStyle.graphicOpacity = 1;
+  iconStyle.graphicZIndex = 1;
+  iconStyle.graphic = true;
+  iconStyle.graphicHeight = 25;
 
   // When the mobile app window is loaded, not to be confused with jQuery's
   // $(document).ready, This will likely be called before $(document).ready
@@ -24,8 +42,7 @@
       Ti.App.addEventListener('updateReports', function(dictionary) {
         showIncidentMap(dictionary.incidents, dictionary.icon);
       });
-      Ti.App.addEventListener('updateGeolocation', 
-        handleUpdateGeolocation);
+      initGeolocation();
       Ti.App.fireEvent('readyForReports');
     });
   }
@@ -38,31 +55,80 @@
     latitude = settings.latitude;
     longitude = settings.longitude;
     defaultZoom = settings.zoom;
-    incidentUrl = 'http://' + settings.action_domain + '/decayimage/json?callback=?';
-    pollSeconds = settings.poll;
+
+    // We don't know if the followGPS setting has changed but we can just renew
+    // it regardless.  disableGeolocation(), if followGPS then
+    // initGeolocation()
+    disableGeolocation();
+    if (settings.followGPS) {
+      initGeolocation();
+    }
   }
 
-  function handleUpdateGeolocation(location) {
-    if (
-        (typeof(location.latitude) === 'undefined') ||
-        (typeof(location.longitude) === 'undefined') 
-       ) {
-      Ti.API.debug('handleUpdateGeolocation did not recieve location info');
-      return;
-    } 
+  function initGeolocation() {
+    var locationIconStyle =  OpenLayers.Util.extend({}, iconStyle);
+    locationIconStyle.graphicHeight = 50;
+    locationIconStyle.graphicZIndex = 2;
+    locationIconStyle.externalGraphic = '../img/flag.png';
 
-    Ti.API.debug('reports.js handleUpdateGeolocation called with location: '
-        +JSON.stringify(location));
+    Ti.App.addEventListener('updateGeolocation', function(location) {
+      if (
+          (typeof(location.lat) === 'undefined') ||
+          (typeof(location.lon) === 'undefined') 
+         ) {
+        Ti.API.debug('handleUpdateGeolocation did not recieve location info');
+        return;
+      } 
 
-    // check to see if it is different then the values we already have
-    if ( (latitude != location.latitude) || (longitude != location.longitude) ) {
-      latitude = location.latitude;
-      //Ti.App.Properties.setDouble("latitude", location.latitude);
-      longitude = location.longitude;
-      //Ti.App.Properties.setDouble("longitude", location.longitude);
+      // check to see if it is different then the values we already have
+      if ( (latitude != location.lat) || (longitude != location.lon) ) {
+        Ti.API.debug('handleUpdateGeolocation updating the "Current Location" layer');
+        var oldLayer = map.getLayersByName('Current Location');
+        for (var i = 0; i < oldLayer.length; i++)
+        {
+          map.removeLayer(oldLayer[i]);
+        }
 
-      // Update the map position
-      mapSetCenter();
+        var lVector = new OpenLayers.Layer.Vector(
+          'Current Location', {
+            projection: new OpenLayers.Projection("EPSG:4326"),
+            style: locationIconStyle,
+            rendererOptions: {zIndexing: true}
+          }
+        );
+
+        latitude = location.lat;
+        longitude = location.lon;
+
+        // create a point from the latlon
+        var locationPoint = new OpenLayers.Geometry.Point( 
+          location.lon, location.lat);
+
+        locationPoint.transform(proj, map.getProjectionObject());
+
+        var newLocationIconStyle =  OpenLayers.Util.extend({}, locationIconStyle);
+
+        var feature = new OpenLayers.Feature.Vector(
+          locationPoint, null, newLocationIconStyle);
+
+        lVector.addFeatures([feature]);
+
+        map.addLayer(lVector);
+
+        // Update the map position
+        mapSetCenter();
+      }
+    });
+
+  }
+
+  function disableGeolocation() {
+    // remove the updateGeolocation listener
+    Ti.App.removeEventListener('updateGeolocation');
+
+    // remove the lVector layer if the map has been initialized
+    if (map !== null) {
+      map.removeLayer(lVector);
     }
   }
 
@@ -96,25 +162,6 @@
       map.removeLayer(currentLayersIcons[i]);
     }
 
-    // Default styling for the reports
-    var reportStyle = OpenLayers.Util.extend({}, 
-      OpenLayers.Feature.Vector.style["default"]);
-
-    reportStyle.pointRadius = 8;
-    reportStyle.fillColor = "#30E900";
-    reportStyle.fillOpacity = "0.8";
-    reportStyle.strokeColor = "#197700";
-    // Does this make the total point radius = 8+3/2?
-    reportStyle.strokeWidth = 3;
-    reportStyle.graphicZIndex = 2;
-
-    // Default style for the associated report category icons 
-    var iconStyle =  OpenLayers.Util.extend({}, reportStyle);
-    iconStyle.graphicOpacity = 1;
-    iconStyle.graphicZIndex = 1;
-    iconStyle.graphic = true;
-    iconStyle.graphicHeight = 25;
-
     // create simple vector layer where the report icons will be placed
     var vLayer = new OpenLayers.Layer.Vector(layerName, {
       projection: new OpenLayers.Projection("EPSG:4326"),
@@ -140,7 +187,6 @@
         incidents[i].incident.locationlatitude
       );
 
-      var proj = new OpenLayers.Projection("EPSG:4326");
       incidentPoint.transform(proj, map.getProjectionObject());
 
       // If the incident has ended but it is configured to "decay" we should
