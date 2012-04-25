@@ -82,6 +82,7 @@
 
       // check to see if it is different then the values we already have
       if ( (latitude != location.lat) || (longitude != location.lon) ) {
+        Ti.API.debug('handleUpdateGeolocation updating the "Current Location" layer');
         var oldLayer = map.getLayersByName('Current Location');
         for (var i = 0; i < oldLayer.length; i++)
         {
@@ -112,7 +113,7 @@
 
         lVector.addFeatures([feature]);
 
-        map.addLayers([lVector]);
+        map.addLayer(lVector);
 
         // Update the map position
         mapSetCenter();

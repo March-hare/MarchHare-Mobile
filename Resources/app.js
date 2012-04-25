@@ -80,7 +80,6 @@ Ti.App.addEventListener('pollIntervalChanged', function() {
 
 // We dont have any control over how frequently the actual device polls.
 Ti.Geolocation.purpose = "Positioning map based on your location (default:disabled)";
-Titanium.Geolocation.accuracy = Titanium.Geolocation.ACCURACY_LOW;
 Titanium.Geolocation.preferredProvider = Titanium.Geolocation.PROVIDER_GPS;
 
 // There are 80 meeters in one citry block, this means a person will have to move 
@@ -88,14 +87,9 @@ Titanium.Geolocation.preferredProvider = Titanium.Geolocation.PROVIDER_GPS;
 // about 4 city blocks within view
 Titanium.Geolocation.distanceFilter = 240;
 
-var gpsInterval;
 if (Ti.App.Properties.getBool('gpsFollow', 
     MarchHare.settings.gpsFollow.default_value)) {
-  /* minutes * seconds * milliseconds */
 
-  // This does not seem to actuall get updated GPS info unfortunately
-  //Ti.API.debug('Scheduling location updates every '+ 1*60*1000 +' seconds');
-  //gpsInterval = setInterval(updateGeoLocation, 1*60*1000);
   Titanium.Geolocation.addEventListener('location', updateGeoLocationHandler);
 }
 
@@ -105,10 +99,10 @@ Ti.App.addEventListener('gpsFollowChanged', function() {
     ') event recieved, updating location polling');
   if (Ti.App.Properties.getBool('gpsFollow', 
     MarchHare.settings.gpsFollow.default_value)) {
-    gpsInterval = setInterval(updateGeoLocation, 1*60*1000);
+    Titanium.Geolocation.addEventListener('location', updateGeoLocationHandler);
   } else {
     Ti.API.debug('gpsFollowChanged event recieved, clearing gps interval');
-    clearInterval(gpsInterval);
+    Titanium.Geolocation.removeEventListener('location');
   }
 });
 
