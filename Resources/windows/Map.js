@@ -1,6 +1,9 @@
 (function () {
   MarchHare.ui.createMapView = function() {
-    var webview = Ti.UI.createWebView({ url: '../pages/map.html' });
+    var webview = Ti.UI.createWebView({ 
+      url: '../pages/map.html',
+      touchEnabled: true
+    });
 
     // TODO: The gestures below need to be supported
     // https://wiki.appcelerator.org/display/guides/Supporting+Gestures
