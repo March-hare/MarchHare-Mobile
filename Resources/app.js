@@ -10,7 +10,6 @@ Ti.include(
     'march-hare/march-hare.js',
     'windows/Settings.js',
     'windows/Map.js',
-    'windows/Reports.js',
     'march-hare/database.js'
     );
 
