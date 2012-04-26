@@ -101,7 +101,7 @@ Ti.App.addEventListener('gpsFollowChanged', function() {
     Titanium.Geolocation.addEventListener('location', updateGeoLocationHandler);
   } else {
     Ti.API.debug('gpsFollowChanged event recieved, clearing gps interval');
-    Titanium.Geolocation.removeEventListener('location');
+    Titanium.Geolocation.removeEventListener('location', updateGeoLocationHandler);
   }
 });
 

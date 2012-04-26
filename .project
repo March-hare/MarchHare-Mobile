@@ -19,5 +19,6 @@
 	<natures>
 		<nature>com.appcelerator.titanium.mobile.nature</nature>
 		<nature>com.aptana.projects.webnature</nature>
+		<nature>com.aptana.ruby.core.rubynature</nature>
 	</natures>
 </projectDescription>
