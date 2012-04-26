@@ -1,6 +1,6 @@
 Ti.include( 
     '../march-hare/march-hare.js',
-    '../windows/Settings.js',
+    '../windows/Settings.js'
     );
 
 // Add application settings menu to the main mapping window 

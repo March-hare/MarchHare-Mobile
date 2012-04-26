@@ -1,4 +1,9 @@
 (function () {
+  // It was decided not to use the native preferences because there dies not
+  // seem to be a way to create dynamic preference lists
+  //
+  // The example used to create this was pulled from: http://bit.ly/KbLUA7
+  
   MarchHare.ui.createSettingsWindow = function() {
     var win = Ti.UI.createWindow({ 
       backgroundColor: '#000',
@@ -6,22 +11,13 @@
       modal: true 
     });
 
-    // Create a scrollable view for all the settings views to be placed in
-    var scrollView = Ti.UI.createScrollView({
-      contentWidth:'auto',
-      contentHeight:'auto',
-      top:0,
-      showVerticalScrollIndicator:true,
-      showHorizontalScrollIndicator:false
+    var sections = new Array;
+
+    var appSettingsSection = Ti.UI.createTableViewSection({
+        headerTitle: "Application Settings"
     });
 
-		var domainView = Ti.UI.createView({
-      layout:'vertical',
-      top: 10,
-      left: 10,
-      width: 300,
-      height: 50
-    });
+    var domainRow = Ti.UI.createTableViewRow();
 
     // TODO: this should actually all be wrapped in a table with each setting 
     // that is not a checkbox diverted to its own modal window
@@ -29,20 +25,22 @@
       text: 'Action Domain: ', 
       top: 0, left: 0,
       color: '#fff' });
-    domainView.add(domainLabel);
+
+    domainRow.add(domainLabel);
 
     // TODO: as we add more settings we will have different UI fields we will
     // want to use.  We will have to change this dependent on a new property
     // in the MarchHare.settings list
     var domainField = Ti.UI.createTextField( { 
       //top:20, left:0, width: 200,
-      left:0, width: 200,
+      left:0, width: 200, top: 20,
       hintText: Ti.App.Properties.getString('action_domain', 
         MarchHare.settings.action_domain.default_value),
       autoCorrect: false,
       autocapitalization: Titanium.UI.TEXT_AUTOCAPITALIZATION_NONE
     });
 
+    // TODO: change this to Ti.UI.notification
     var alert = Titanium.UI.createAlertDialog({
       title: 'Settings message'
     });
@@ -68,32 +66,26 @@
         }
       });
 
-    domainView.add(domainField);
-    scrollView.add(domainView);
+    domainRow.add(domainField);
+    appSettingsSection.add(domainRow);
 
-		var pollView = Ti.UI.createView({
-      layout:'vertical',
-      top: 70,
-      left: 10,
-      width: 300,
-      height: 50
-    });
+		var pollRow = Ti.UI.createTableViewRow();
 
     var pollLabel = Ti.UI.createLabel({ 
       text: 'Poll Frequency in Seconds:', 
-        top: 0, left: 0,
-        color: '#fff' });
-    pollView.add(pollLabel);
+      top: 10, left: 0,
+      color: '#fff' });
+    pollRow.add(pollLabel);
 
     var pollField = Ti.UI.createTextField( { 
-      top: 0, left: 0, width: 40,
+      top: 5, width: 40, right: 10,
       hintText: Ti.App.Properties.getString('poll', 
         MarchHare.settings.poll.default_value),
       autoCorrect: false,
       autocapitalization: Titanium.UI.TEXT_AUTOCAPITALIZATION_NONE
     });
-    pollView.add(pollField);
-    scrollView.add(pollView);
+    pollRow.add(pollField);
+    appSettingsSection.add(pollRow);
 
     // Save changes, and let the application know on success
     pollField.
@@ -115,20 +107,17 @@
       });
 
     // Follow via GPS settings
-		var GPSView = Ti.UI.createView({
-      layout:'vertical',
-      top: 130,
-      left: 10,
-      width: 300,
-      height: 50
-    });
+		var GPSRow = Ti.UI.createTableViewRow();
+
+    var GPSLabel = Ti.UI.createLabel({ 
+      text: 'Update map w/ GPS: ', 
+      top: 0, left: 0, top: 10,
+      color: '#fff' });
+    GPSRow.add(GPSLabel);
 
     var GPSField = Ti.UI.createSwitch( { 
-      top: 0, left: 0,
+      top: 5, right: 10,
       style:Ti.UI.Android.SWITCH_STYLE_CHECKBOX,
-      title: "Follow via GPS",
-      titleOn: "Follow via GPS",
-      titleOff: "Do NOT Follow via GPS",
       value: Ti.App.Properties.getBool('gpsFollow', 
         MarchHare.settings.gpsFollow.default_value)
     });
@@ -146,9 +135,15 @@
         }, 2000); 
       });
 
-    GPSView.add(GPSField);
-    scrollView.add(GPSView);
-    win.add(scrollView);
+    GPSRow.add(GPSField);
+    appSettingsSection.add(GPSRow);
+    sections.push(appSettingsSection);
+
+    /* tableview */
+    var tableView = Ti.UI.createTableView({ data: sections });
+
+    win.add(tableView);
+
     return win;
   }
   
