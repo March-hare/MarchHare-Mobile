@@ -18,7 +18,38 @@ Ti.include(
 var reportsInitialized = false;
 
 var win = MarchHare.ui.createMapWindow();
+
 win.open();
+
+if (Ti.Platform.osname == 'android') {
+  var win = Ti.UI.currentWindow;
+  var activity = Ti.Android.currentActivity;
+
+  activity.onCreateOptionsMenu = function(e){
+    var menu = e.menu;
+    var menuItem = menu.add({ title: 'Settings' });
+    menuItem.addEventListener("click", function(){
+      Ti.API.debug('menu handler MarchHare: '+JSON.stringify(MarchHare));
+      var settingsWin = MarchHare.ui.createSettingsWindow();
+      settingsWin.open({});
+      Ti.API.debug('settings window opened');
+    });
+  };
+} 
+/*
+else {
+  // TODO: create iOS options menu
+  // iOS code might look something like this:  where iconWin is an actuall
+  // icon?  I am not sure how menus are done in iOS
+  var rightButton = Ti.UI.createButton({
+      systemButton: Ti.UI.iPhone.SystemButton.REFRESH
+  });
+  iconWin.rightNavButton = rightButton;
+  rightButton.addEventListener('click', function () {
+      Ti.fireEvent('codestrong:update_data');
+  });
+}
+*/
 
 // The benefit of polling for reports in the main code is so that we can trigger
 // phone based events like alerts if the incident list changes
@@ -27,7 +58,6 @@ if (DEV) {
   Ti.App.Properties.setString('lastpoll', '1970-01-01');
   MarchHare.database.flushIncidents(); 
   MarchHare.database.flushIncidentCategories(); 
-  MarchHare.database.flushCategories();
   Ti.App.Properties.setInt('poll', MarchHare.settings.poll.default_value);
 }
 MarchHare.database.initializeCategories();
@@ -258,19 +288,8 @@ function handleServerResponse(response) {
   if (newIncidents || !initialized) {
     Ti.API.debug('pollReports: firing updateReports event, map_initialized: '+
       initialized +', newIncidents: '+ newIncidents);
-    result = MarchHare.database.getIncidentsJSON();
+    updatedReportsAction();
 
-    // Get the default decay image from the local database
-    decayimageIcon = MarchHare.database.getSetting('decayimage_default_icon');
-
-    // If the default decay image icon is not set then change it to the default
-    decayimageIcon = (decayimageIcon) ? decayimageIcon :
-      'http://'+ 
-      Ti.App.Properties.getString('action_domain',
-        MarchHare.settings.action_domain.default_value)+
-      '/plugins/decayimage/images/Question_icon_thumb.png';
-
-    Ti.App.fireEvent('updateReports', {incidents: result, icon: decayimageIcon});
   } else {
     Ti.API.debug('pollReports: not updating because we did not recieve any new reports');
   }
@@ -278,4 +297,25 @@ function handleServerResponse(response) {
   if (!error) {
     Ti.App.Properties.setString('lastpoll', new Date().toISOString());
   }
+}
+
+Ti.App.addEventListener('filterReports', function() {
+  updatedReportsAction();
+});
+
+function updatedReportsAction() {
+  result = MarchHare.database.getIncidentsJSON({});
+  Ti.API.debug('app.js updatedReportsAction result: '+ result);
+
+  // Get the default decay image from the local database
+  decayimageIcon = MarchHare.database.getSetting('decayimage_default_icon');
+
+  // If the default decay image icon is not set then change it to the default
+  decayimageIcon = (decayimageIcon) ? decayimageIcon :
+    'http://'+ 
+    Ti.App.Properties.getString('action_domain',
+      MarchHare.settings.action_domain.default_value)+
+    '/plugins/decayimage/images/Question_icon_thumb.png';
+
+  Ti.App.fireEvent('updateReports', {incidents: result, icon: decayimageIcon});
 }
