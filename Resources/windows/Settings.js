@@ -3,8 +3,6 @@
   // seem to be a way to create dynamic preference lists
   //
   // The example used to create this was pulled from: http://bit.ly/KbLUA7
-
-
   
   MarchHare.ui.createSettingsWindow = function() {
     var win = Ti.UI.createWindow({ 
@@ -173,10 +171,8 @@
 
       // attach a eventhandler to the switch
       // firing updateReports for every category press is a little "heavy 
-      // handed", but its not like this peration will be performed alot an
-      // alternative could be to create a new event for the webview called
-      // filter events.  OR we could catch an event on window close that would
-      // cause an updateReports event to be fired
+      // handed", instead fire an event on window close that would
+      // cause updateReports event to be fired in app.js
       categorySwitch.
         addEventListener("change", function(e) {
           MarchHare.database.setCategoryFilter(e.source.category_id, e.value);
@@ -193,7 +189,6 @@
 
     win.add(tableView);
 
-    Ti.API.debug('Adding the close event listener to the window');
     win.addEventListener('close', function() {
       Ti.App.fireEvent('filterReports');
     });

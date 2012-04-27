@@ -36,17 +36,6 @@
     var win = Ti.UI.createWindow({
       title: 'In the streets',
       exitOnClose: true,
-      activity: {
-        onCreateOptionsMenu: function(e){
-          var menu = e.menu;
-          var menuItem = menu.add({ title: 'Settings' });
-          menuItem.addEventListener("click", function(){
-            var settingsWin = MarchHare.ui.createSettingsWindow();
-            settingsWin.open({});
-            Ti.API.debug('settings window opened');
-          });
-        }
-      }
     });
 
     Ti.API.debug('About to add map view: ');
