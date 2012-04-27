@@ -166,7 +166,6 @@
 
         if (category.isValidRow()) { 
           filter = category.fieldByName('filter'); 
-          Ti.API.debug('preserving category filter category: '+filter);
         }
 
         var id = MarchHare.database.setCategory(
@@ -191,7 +190,7 @@
   MarchHare.database.flushCategories = function() {
     var query = "DELETE FROM categories";
     db.execute(query);
-  };
+  }
 
   MarchHare.database.flushIncidentCategories = function() {
     var query = "DELETE FROM incident_categories";
@@ -392,7 +391,6 @@
         '(incident_categories.category_id = categories.id) '+
         'WHERE incident_categories.incident_id='+ incident.incident.incidentid;
 
-      Ti.API.debug('MarchHare.database.getIncidentsJSON cat query: '+query);
       catRows = db.execute(query);
       while (catRows.isValidRow()) {
         if (incident.incident.incidenthasended == 1) {
