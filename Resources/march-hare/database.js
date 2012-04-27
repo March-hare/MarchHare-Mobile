@@ -95,6 +95,28 @@
     return db.execute(query);
   };
 
+  MarchHare.database.getCategories = function() {
+    var query = 'SELECT * from categories';
+    return db.execute(query);
+  };
+
+  MarchHare.database.getCategoriesJSON = function() {
+    var rows = MarchHare.database.getCategories();
+    var categories = [];
+    while (rows.isValidRow()) {
+      var category = {
+        id: rows.fieldByName('id'),
+        title: rows.fieldByName('title'),
+        icon: rows.fieldByName('icon'),
+        decayimage: rows.fieldByName('decayimage'),
+        filter: rows.fieldByName('filter'),
+      };
+      categories.push(category);
+      rows.next();
+    }
+    return JSON.stringify(categories);
+  };
+
   MarchHare.database.initializeCategories = function() {
     var url = 'http://'+ 
         Ti.App.Properties.getString('action_domain',
@@ -133,8 +155,26 @@
       categories.payload.categories instanceof Array &&
       typeof categories.payload.decayimage_default_icon != 'undefined'
     ) {
+
+      // Setting the category deletes the category first in case there were
+      // any updates from the server, but we preserve the user defined
+      // category filter.
       for (i in categories.payload.categories) {
-        MarchHare.database.setCategory(categories.payload.categories[i].category);
+        var filter = null;
+        var category = MarchHare.database.getCategory(
+          categories.payload.categories[i].category);
+
+        if (category.isValidRow()) { 
+          filter = category.fieldByName('filter'); 
+          Ti.API.debug('preserving category filter category: '+filter);
+        }
+
+        var id = MarchHare.database.setCategory(
+            categories.payload.categories[i].category);
+        if ((filter !== null) && id) {
+          MarchHare.database.setCategoryFilter(id, filter);
+        }
+
       };
 
       // Get the default decayimage
@@ -151,11 +191,30 @@
   MarchHare.database.flushCategories = function() {
     var query = "DELETE FROM categories";
     db.execute(query);
-  }
+  };
 
   MarchHare.database.flushIncidentCategories = function() {
     var query = "DELETE FROM incident_categories";
     db.execute(query);
+  }
+
+  MarchHare.database.setCategoryFilter = function(id, filter) {
+    // verify the category exists
+    if (!MarchHare.database.getCategory({id: id})) {
+      Ti.API.error('setCategoryFilter tried to update the filter for a '+
+        'category with id ('+id+') that does not exist');
+      return false;
+    }
+
+    // verify the filter
+    if ((filter != 1) && (filter != 0)) {
+      Ti.API.error('setCategoryFilter tried to update the filter with a '+
+        'invalid filter value ('+filter+')');
+      return false;
+    }
+
+    var query = 'UPDATE categories set filter='+(filter?1:0)+' where id='+id;
+    return db.execute(query);
   }
 
   MarchHare.database.setIncident = function(incident) {
@@ -289,9 +348,27 @@
     return db.execute(query);
   }
 
-  MarchHare.database.getIncidentsJSON = function() {
+  MarchHare.database.getFilteredIncidents = function() {
+    // Get a list of all category ids that we are filtering by
+    var query = 'select incidents.id, incidents.title, incidents.description, '+
+      'incidents.date, incidents.lat, incidents.lon, incidents.ended from incidents '+
+      'join incident_categories on '+
+        '(incidents.id = incident_categories.incident_id) '+
+      'join categories on '+
+        '(incident_categories.category_id = categories.id) '+
+      'WHERE categories.filter=1 '+
+      'GROUP BY incidents.id';
+    return db.execute(query);
+  }
+
+  MarchHare.database.getIncidentsJSON = function(filter) {
     var query;
-    var rows = MarchHare.database.getIncidents();
+    var rows;
+    if (typeof filter === 'undefined') {
+     rows = MarchHare.database.getIncidents();
+    } else {
+      rows = MarchHare.database.getFilteredIncidents();
+    }
     var incidents = [];
     while (rows.isValidRow()) {
       var incident = {
@@ -315,6 +392,7 @@
         '(incident_categories.category_id = categories.id) '+
         'WHERE incident_categories.incident_id='+ incident.incident.incidentid;
 
+      Ti.API.debug('MarchHare.database.getIncidentsJSON cat query: '+query);
       catRows = db.execute(query);
       while (catRows.isValidRow()) {
         if (incident.incident.incidenthasended == 1) {
