@@ -29,10 +29,8 @@ if (Ti.Platform.osname == 'android') {
     var menu = e.menu;
     var menuItem = menu.add({ title: 'Settings' });
     menuItem.addEventListener("click", function(){
-      Ti.API.debug('menu handler MarchHare: '+JSON.stringify(MarchHare));
       var settingsWin = MarchHare.ui.createSettingsWindow();
       settingsWin.open({});
-      Ti.API.debug('settings window opened');
     });
   };
 } 
@@ -305,7 +303,6 @@ Ti.App.addEventListener('filterReports', function() {
 
 function updatedReportsAction() {
   result = MarchHare.database.getIncidentsJSON({});
-  Ti.API.debug('app.js updatedReportsAction result: '+ result);
 
   // Get the default decay image from the local database
   decayimageIcon = MarchHare.database.getSetting('decayimage_default_icon');
