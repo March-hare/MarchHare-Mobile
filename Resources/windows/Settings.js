@@ -3,6 +3,8 @@
   // seem to be a way to create dynamic preference lists
   //
   // The example used to create this was pulled from: http://bit.ly/KbLUA7
+
+
   
   MarchHare.ui.createSettingsWindow = function() {
     var win = Ti.UI.createWindow({ 
@@ -139,10 +141,62 @@
     appSettingsSection.add(GPSRow);
     sections.push(appSettingsSection);
 
+    var categoryFilterSection = Ti.UI.createTableViewSection({
+        headerTitle: "Category Filters"
+    });
+
+    // Get all of the categories
+    var categories = MarchHare.database.getCategoriesJSON();
+    categories = JSON.parse(categories);
+    for (i in categories) {
+      // There are two Ushahidi default categories that we do not want to 
+      // display here titled 'NONE' and 'Trusted Reports'
+      if (categories[i].title == 'NONE' || categories[i].title == 'Trusted Reports') {
+        continue;
+      }
+
+      // create a table row with a label and a switch
+      var categoryRow = Ti.UI.createTableViewRow();
+
+      var categoryLabel = Ti.UI.createLabel({
+        text: categories[i].title+': ', 
+        top: 0, left: 0, top: 10,
+        color: '#fff' });
+      categoryRow.add(categoryLabel);
+
+      var categorySwitch = Ti.UI.createSwitch({
+        top: 5, right: 10,
+        style:Ti.UI.Android.SWITCH_STYLE_CHECKBOX,
+        category_id: categories[i].id,
+        value: categories[i].filter ? true : false
+      });
+
+      // attach a eventhandler to the switch
+      // firing updateReports for every category press is a little "heavy 
+      // handed", but its not like this peration will be performed alot an
+      // alternative could be to create a new event for the webview called
+      // filter events.  OR we could catch an event on window close that would
+      // cause an updateReports event to be fired
+      categorySwitch.
+        addEventListener("change", function(e) {
+          MarchHare.database.setCategoryFilter(e.source.category_id, e.value);
+        });
+      categoryRow.add(categorySwitch);
+
+      // add that row to the section
+      categoryFilterSection.add(categoryRow);
+    }
+    sections.push(categoryFilterSection);
+
     /* tableview */
     var tableView = Ti.UI.createTableView({ data: sections });
 
     win.add(tableView);
+
+    Ti.API.debug('Adding the close event listener to the window');
+    win.addEventListener('close', function() {
+      Ti.App.fireEvent('filterReports');
+    });
 
     return win;
   }
