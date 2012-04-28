@@ -17,6 +17,8 @@
   */
   db  = Ti.Database.install('incidents.sqlite', 'incidents');
 
+  var databaseIndicator = Titanium.UI.createActivityIndicator({ height:50, width:10 });
+
   MarchHare.database.setSetting = function(key, value) {
     var query = 'DELETE FROM settings WHERE key="'+key+'"';
     db.execute(query);
@@ -129,7 +131,7 @@
 
       // If we cant set the semaphore then we do not have access to the HTTP 
       // Client yet.
-      if (!MarchHare.xhrGetSemaphore()) {
+      if (!MarchHare.xhrGetSemaphore('Initializing categories')) {
         Ti.API.info('Delaying categories request because the HTTP Client is in use.');
         return;
       }
