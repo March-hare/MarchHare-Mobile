@@ -49,6 +49,13 @@ else {
 }
 */
 
+// Set the handler for whe the action midpoint is recieved
+// In testing this event does not get recieved until after the settings are 
+// sent to the map view
+Ti.App.addEventListener('geolocationDownloaded', function() {
+  updatedActionMidPoint();
+});
+
 // The benefit of polling for reports in the main code is so that we can trigger
 // phone based events like alerts if the incident list changes
 // TODO: test with these settings off
@@ -59,6 +66,7 @@ if (DEV) {
   Ti.App.Properties.setInt('poll', MarchHare.settings.poll.default_value);
 }
 MarchHare.database.initializeCategories();
+MarchHare.database.initializeMidPoint();
 
 // TODO: in testing I have noticed that this completes before the MapWindow is 
 // open with the defaut poll interval (30 s) this does not matter much if we do 
@@ -82,6 +90,7 @@ Ti.App.addEventListener('actionDomainChanged', function() {
   MarchHare.database.flushIncidentCategories(); 
   MarchHare.database.flushCategories(); 
   MarchHare.database.initializeCategories();
+  MarchHare.database.initializeMidPoint();
   pollForReports();
 });
 
@@ -129,6 +138,15 @@ Ti.App.addEventListener('gpsFollowChanged', function() {
     Titanium.Geolocation.addEventListener('location', updateGeoLocationHandler);
   } else {
     Ti.API.debug('gpsFollowChanged event recieved, clearing gps interval');
+
+    // This handles the privacy concern of a user turning off gpsFollow on 
+    // their device then getting their phone confiscated and the saved location
+    // being able to be used as evidence
+    Ti.App.Properties.setDouble('latitude', 
+      Ti.App.Properties.getDouble('action_latitude'));
+    Ti.App.Properties.setDouble('longitude', 
+      Ti.App.Properties.getDouble('action_longitude'));
+
     Titanium.Geolocation.removeEventListener('location', updateGeoLocationHandler);
   }
 });
@@ -315,4 +333,15 @@ function updatedReportsAction() {
     '/plugins/decayimage/images/Question_icon_thumb.png';
 
   Ti.App.fireEvent('updateReports', {incidents: result, icon: decayimageIcon});
+}
+
+function updatedActionMidPoint() {
+  // If followGPS is on we will not change the default latitude and longitude
+  if (!Ti.App.Properties.getBool('gpsFollow', 
+    MarchHare.settings.gpsFollow.default_value)) {
+    Ti.App.Properties.setDouble('latitude', 
+      Ti.App.Properties.getDouble('action_latitude'));
+    Ti.App.Properties.setDouble('longitude', 
+      Ti.App.Properties.getDouble('action_longitude'));
+  }
 }
