@@ -121,7 +121,7 @@
     var url = 'http://'+ 
         Ti.App.Properties.getString('action_domain',
         MarchHare.settings.action_domain.default_value)+
-        '/api/?task=decayimagecategories';
+        '/api?task=decayimagecategories';
 
 
     // TODO: start an indicator
@@ -420,7 +420,7 @@
     var url = 'http://'+ 
         Ti.App.Properties.getString('action_domain',
           MarchHare.settings.action_domain.default_value)+
-        '/api/?task=decayimage';
+        '/api?task=decayimage';
 
     // TODO: start an indicator
     var t = setInterval(function() {
@@ -478,6 +478,57 @@
     if (!newIncidents) {
       Ti.API.debug('nitializeIncidents: did not recieve any reports');
     }
+  }
+
+  MarchHare.database.initializeMidPoint = function() {
+    var url = 'http://'+ 
+        Ti.App.Properties.getString('action_domain',
+        MarchHare.settings.action_domain.default_value)+
+        '/api?task=geographicmidpoint';
+
+
+    // TODO: start an indicator
+    var t = setInterval(function() {
+
+      // If we cant set the semaphore then we do not have access to the HTTP 
+      // Client yet.
+      if (!MarchHare.xhrGetSemaphore('Initializing action location')) {
+        Ti.API.info('Delaying geographic_midpoint request because the HTTP Client is in use.');
+        return;
+      }
+
+      MarchHare.xhrProcess({
+        url: url,
+        onload: MarchHare.database.handleServerResponseGeoLocation
+      });
+
+      clearInterval(t);
+    }, 100);
+  }
+
+  MarchHare.database.handleServerResponseGeoLocation = function(response) {
+    var payload = JSON.parse(response);
+    var i;
+
+    // Get the categories from the server and insert any new ones 
+    if (
+      typeof payload != 'undefined' &&
+      typeof payload.payload != 'undefined' &&
+      typeof payload.payload.geographic_midpoint != 'undefined' &&
+      payload.payload.geographic_midpoint instanceof Array &&
+      typeof payload.payload.geographic_midpoint[0].latitude != 'undefined' &&
+      typeof payload.payload.geographic_midpoint[0].longitude != 'undefined'
+    ) {
+      Ti.App.Properties.setDouble('action_latitude', 
+        payload.payload.geographic_midpoint[0].latitude);
+      Ti.App.Properties.setDouble('action_longitude', 
+        payload.payload.geographic_midpoint[0].longitude);
+    }
+    else {
+      Ti.API.error('InitializeGeoLocation: We recieved an invalid response '+
+        'from the server: '+ JSON.stringify(payload));
+    }
+    Ti.App.fireEvent('geolocationDownloaded');
   }
 
   // This will perform some tests on the database and log the results.  The 

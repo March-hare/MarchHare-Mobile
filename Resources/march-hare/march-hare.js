@@ -64,6 +64,20 @@ var MarchHare = {
       func: Ti.App.Properties.setDouble, 
       verify: function(){}
     },
+    action_latitude: {
+      title: 'Action Lattitude',
+      default_value: '41.889818923027',
+      // TODO: figure out if this can actually handle a geo position
+      func: Ti.App.Properties.setDouble, 
+      verify: function(){}
+    },
+    action_longitude: {
+      title: 'Action Longitude',
+      default_value: '-87.637596505706',
+      // TODO: figure out if this can actually handle a geo position
+      func: Ti.App.Properties.setDouble, 
+      verify: function(){}
+    },
     // TODO: should this be remembered persistently, updated when the user
     // changes it through the OpenLayers Controls?
     zoom: {
