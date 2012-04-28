@@ -10,6 +10,7 @@ Ti.include(
     'march-hare/march-hare.js',
     'windows/Settings.js',
     'windows/Map.js',
+    'windows/Reports.js',
     'march-hare/database.js'
     );
 
@@ -30,6 +31,11 @@ if (Ti.Platform.osname == 'android') {
     var menuItem = menu.add({ title: 'Settings' });
     menuItem.addEventListener("click", function(){
       var settingsWin = MarchHare.ui.createSettingsWindow();
+      settingsWin.open({});
+    });
+    var rMenuItem = menu.add({ title: 'Reports' });
+    rMenuItem.addEventListener("click", function(){
+      var settingsWin = MarchHare.ui.createReportsWindow();
       settingsWin.open({});
     });
   };

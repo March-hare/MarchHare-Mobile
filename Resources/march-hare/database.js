@@ -343,7 +343,8 @@
   }
 
   MarchHare.database.getIncidents = function() {
-    var query = 'SELECT * FROM incidents';
+    var query = 'SELECT * FROM incidents '+
+      'ORDER BY incidents.date DESC';
     return db.execute(query);
   }
 
@@ -356,7 +357,8 @@
       'join categories on '+
         '(incident_categories.category_id = categories.id) '+
       'WHERE categories.filter=1 '+
-      'GROUP BY incidents.id';
+      'GROUP BY incidents.id '+
+      'ORDER BY incidents.date DESC';
     return db.execute(query);
   }
 
