@@ -41,6 +41,7 @@
       */
       map.addControl(new OpenLayers.Control.Navigation({documentDrag: true}));
       Ti.App.addEventListener('newSettingsAvailable', newSettingsAvailable);
+      Ti.App.addEventListener('gotoLocation', mapSetCenter);
       Ti.App.addEventListener('updateReports', function(dictionary) {
         showIncidentMap(dictionary.incidents, dictionary.icon);
       });
@@ -134,9 +135,22 @@
     }
   }
 
-  function mapSetCenter() {
+  function mapSetCenter(settings) {
+    var lat = latitude;
+    var lon = longitude;
+
+    Ti.API.debug('js/reports.js mapSetCenter this: '+ JSON.stringify(settings));
+    // Optionally accept bound parameters
+    if (
+        typeof settings !== 'undefined' && 
+        typeof settings.lat !== 'undefined' && 
+        typeof settings.lon !== 'undefined') {
+      lat = settings.lat;
+      lon = settings.lon;
+    }
+
     // Create a lat/lon object and center the map
-    var myPoint = new OpenLayers.LonLat(longitude, latitude);
+    var myPoint = new OpenLayers.LonLat(lon, lat);
     myPoint.transform(proj_4326, proj_900913);
     
     // Display the map centered on a latitude and longitude
