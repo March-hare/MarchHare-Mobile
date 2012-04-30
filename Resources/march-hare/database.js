@@ -358,13 +358,13 @@
   };
 
   MarchHare.database.updateIncident = function(incident) {
-    var query = 'UPDATE incident '+
-      'SET title='+ incident.incidenttitle +', '+
-      'SET description='+ incident.incident.description+', '+
-      'SET date='+ incident.incident.incidentdate+', '+
-      'SET lat='+ incident.incident.incidentlatitude+', '+
-      'SET lon='+ incident.incident.incidentlongitude+' '+
-      'SET ended='+ incident.incident.incidenthasended+' '+
+    var query = 'UPDATE incidents SET '+
+      'title=\''+ incident.incident.incidenttitle +'\', '+
+      'description=\''+ incident.incident.incidentdescription+'\', '+
+      'date=\''+ incident.incident.incidentdate+'\', '+
+      'lat='+ incident.incident.incidentlatitude+', '+
+      'lon='+ incident.incident.incidentlongitude+', '+
+      'ended='+ incident.incident.incidenthasended+' '+
       'WHERE id='+incident.incident.incidentid;
 
     db.execute(query);
@@ -372,6 +372,7 @@
     // Update all categories associated with the incident
     query = 'SELECT * FROM incident_categories WHERE incident_id='+
       incident.incident.incidentid;
+    rows = db.execute(query);
 
     // Get a list of new categories
     var newCats = [];
@@ -380,7 +381,7 @@
     }
 
     // Get a list of currently assigned categories
-    var cats = []
+    var cats = [];
     while (rows.isValidRow()) {
       cats.push(rows.fieldByName('category_id'));
       rows.next();
@@ -398,7 +399,7 @@
     
     // Look for any deleted cats and remove them
     for (i in cats) {
-      if (!i in newcats) {
+      if (!i in newCats) {
         query = 'DELETE FROM incident_categories where category_id='+ i 
           +' AND incident_id='+ incident.incident.incidentid;
         db.execute(query);
