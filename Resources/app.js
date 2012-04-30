@@ -62,6 +62,7 @@ if (DEV) {
   Ti.App.Properties.setString('lastpoll', '1970-01-01');
   MarchHare.database.flushIncidents(); 
   MarchHare.database.flushIncidentCategories(); 
+  MarchHare.database.flushCategories(); 
   Ti.App.Properties.setInt('poll', MarchHare.settings.poll.default_value);
 }
 MarchHare.database.initializeCategories();

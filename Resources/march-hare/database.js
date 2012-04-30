@@ -49,6 +49,8 @@
     db.execute(query);
   }
 
+  // TODO: this means that the mobile application will malfunction for 
+  // categories that do not have icons associated with them.
   MarchHare.database.setCategory = function(category) {
     if (
       typeof category == 'undefined' ||
@@ -119,14 +121,28 @@
     return JSON.stringify(categories);
   };
 
+  // If you want to force an initilization of the categories just flush them
+  // first with MarchHare.database.flushCategories()
   MarchHare.database.initializeCategories = function() {
+    // Unless we are forcing a category refresh check to see if we have any
+    // categories already.  If so then return;
+    var query = 'SELECT count(*) as count from categories';
+    var rows = db.execute(query);
+    if (rows.isValidRow() && rows.fieldByName('count') > 0) {
+      return;
+    }
+
     var url = 'http://'+ 
         Ti.App.Properties.getString('action_domain',
         MarchHare.settings.action_domain.default_value)+
-        '/api/?task=decayimagecategories';
+        '/api?task=decayimagecategories';
 
+    // Configure an event handler to try and download the category icons to
+    // local storage after the categories have been intialized
+    Ti.App.addEventListener('categoriesDownloaded', function() {
+      downloadCategoryIcons();
+    });
 
-    // TODO: start an indicator
     var t = setInterval(function() {
 
       // If we cant set the semaphore then we do not have access to the HTTP 
@@ -189,6 +205,24 @@
     Ti.App.fireEvent('categoriesDownloaded');
   };
 
+  MarchHare.database.handleServerResponseCategoryIcon = function(response) {
+    Ti.API.debug('MarchHare.database.handleServerResponseCategoryIcon '+
+       'category icon downloaded.  Changing reference '+ response.url +
+      ' to '+  response.file);
+    var query = 'UPDATE categories SET icon=\''+response.file+'\' '+
+      'WHERE icon=\''+response.url+'\'';
+    return db.execute(query);
+  };
+
+  MarchHare.database.handleServerResponseDecayIcon = function(response) {
+    Ti.API.debug('MarchHare.database.handleServerResponseDecayIcon '+
+       'decayimage icon downloaded.  Changing reference '+ response.url +
+      ' to '+  response.file);
+    var query = 'UPDATE categories SET decayimage=\''+response.file+'\' '+
+      'WHERE decayimage=\''+response.url+'\'';
+    return db.execute(query);
+  };
+
   MarchHare.database.flushCategories = function() {
     var query = "DELETE FROM categories";
     db.execute(query);
@@ -216,6 +250,82 @@
 
     var query = 'UPDATE categories set filter='+(filter?1:0)+' where id='+id;
     return db.execute(query);
+  }
+
+  var intervals = {};
+  var fnamere = /[^\/]+$/;
+  function downloadCategoryIcons() {
+    var downdir = Titanium.Filesystem.getApplicationDataDirectory();
+    var rows = MarchHare.database.getCategories();
+    var httpre = /^http:\/\//;
+
+    var ct = 0;
+    while (rows.isValidRow()) {
+      ct++;
+      // loop through the categories, grab a xhr semaphore for each,
+      // and dispatch to an apropriate handler.  This could effectively
+      // thread/fork bomb the application if not done correctly
+      var icon = rows.fieldByName('icon');
+      var title = rows.fieldByName('title');
+      Ti.API.debug('rows.isValidRow('+ct+') category:'+title);
+      var decayimageicon = rows.fieldByName('decayimage');
+
+      //TODO: checkout Appcelerator-KitchenSink/Resources/examples/xhr_filedownload.js
+      if (httpre.test(icon)) {
+        intervals[icon] = setInterval(
+          bind({icon: icon, title: title}, downloadCategoryIconsInterval), 1000);
+      }
+      
+      var decayIcon = rows.fieldByName('decayimage');
+      if (httpre.test(decayIcon)) {
+        intervals[decayIcon] = setInterval(
+          bind(
+            {decayIcon: decayimageicon, title: title}, 
+            downloadDecayimageIconsInterval), 
+          1000);
+      }
+      rows.next();
+    }
+  }
+
+  var downloadCategoryIconsInterval = function() {
+    // If we cant set the semaphore then we do not have access to the HTTP 
+    // Client yet.
+    if (!MarchHare.xhrGetSemaphore(
+        'Downloading '+this.title+' icon')) {
+      Ti.API.info(
+        'Delaying category icon request because the HTTP Client is in use.');
+      return;
+    }
+
+    MarchHare.xhrProcess({
+      url: this.icon,
+      file: this.icon.match(fnamere)[0],
+      onload: MarchHare.database.handleServerResponseCategoryIcon
+    });
+
+    Ti.API.debug('database.js downloadCategoryIcons category icon finished');
+    clearInterval(intervals[this.icon]);
+  }
+
+  var downloadDecayimageIconsInterval = function() {
+    // If we cant set the semaphore then we do not have access to the HTTP 
+    // Client yet.
+    if (!MarchHare.xhrGetSemaphore(
+        'Downloading '+this.title+' decayimage icon')) {
+      Ti.API.info(
+        'Delaying decayimage icon request because the HTTP Client is in use.');
+      return;
+    }
+
+    MarchHare.xhrProcess({
+      url: this.decayIcon,
+      file: this.decayIcon.match(fnamere)[0],
+      onload: MarchHare.database.handleServerResponseDecayIcon
+    });
+
+    Ti.API.debug('database.js downloadCategoryIcons decayimage icon finished');
+    clearInterval(intervals[this.decayIcon]);
   }
 
   MarchHare.database.setIncident = function(incident) {
@@ -424,7 +534,7 @@
     var url = 'http://'+ 
         Ti.App.Properties.getString('action_domain',
           MarchHare.settings.action_domain.default_value)+
-        '/api/?task=decayimage';
+        '/api?task=decayimage';
 
     // TODO: start an indicator
     var t = setInterval(function() {
@@ -537,6 +647,20 @@
       Ti.API.debug(output);
     }
 
+  }
+
+  // Useful for making the "arguments" object a true array and also for creating a
+  // copy of an existing array.
+  function toArray(obj) {
+      return Array.prototype.slice.call(obj);
+  }
+
+  // Bind in its simplest form
+
+  function bind(scope, fn) {
+      return function () {
+          return fn.apply(scope, toArray(arguments));
+      };
   }
 
 })();

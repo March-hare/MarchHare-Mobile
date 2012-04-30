@@ -44,9 +44,31 @@ var MarchHare = {
     });
 
     MarchHare.xhr.setOnload(function() {
-      parameters.onload(this.responseText);
+      if (typeof parameters.file != 'undefined') {
+        var f = Titanium.Filesystem.getFile(
+          Titanium.Filesystem.applicationDataDirectory,
+          parameters.file);
+
+        if (Titanium.Platform.name == 'android') {
+          f.write(this.responseData);
+        }
+
+        // If we are downloading a file we will not recieve responseText so
+        // instead we will pass on the url of the download and the local file
+        // where it is saved
+        parameters.onload({file: f.resolve(), url: parameters.url});
+      } else {
+        parameters.onload(this.responseText);
+      }
       MarchHare.xhrReleaseSemaphore();
     });
+
+    if (Titanium.Platform.name != 'android' && 
+        (typeof parameters.file != 'undefined')) {
+      MarchHare.xhr.file = Titanium.Filesystem.getFile(
+        Titanium.Filesystem.applicationDataDirectory,
+        parameters.file);
+    } 
 
     MarchHare.xhr.open("GET", parameters.url);
     Ti.API.debug('MarchHare.xhrProcess url: '+ parameters.url);
