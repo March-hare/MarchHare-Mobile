@@ -3,14 +3,23 @@ var MarchHare = {
   ui: {},
   database: {},
   xhr: Ti.Network.createHTTPClient(),
-  xhrGetSemaphore: function() {
+  //xhrIndicator: Titanium.UI.createActivityIndicator({ height:50, width:10 }),
+  xhrGetSemaphore: function(message) {
     if (MarchHare.xhrSemaphore) {
       return false;
     } else {
+      if (typeof message != 'undefined') {
+        //MarchHare.xhrIndicator.message = message;
+        //MarchHare.xhrIndicator.show();
+      }
       return MarchHare.xhrSemaphore = true;
     }
   },
   xhrReleaseSemaphore: function() {
+    // It's possible that the indicator is not visible, will this be an
+    // issue?  Also will the map app be useable when the indicator is 
+    // displayed?
+    //MarchHare.xhrIndicator.hide();
     MarchHare.xhrSemaphore = false;
   },
   xhrLogServerError: function(e, url) {
@@ -35,9 +44,31 @@ var MarchHare = {
     });
 
     MarchHare.xhr.setOnload(function() {
-      parameters.onload(this.responseText);
+      if (typeof parameters.file != 'undefined') {
+        var f = Titanium.Filesystem.getFile(
+          Titanium.Filesystem.applicationDataDirectory,
+          parameters.file);
+
+        if (Titanium.Platform.name == 'android') {
+          f.write(this.responseData);
+        }
+
+        // If we are downloading a file we will not recieve responseText so
+        // instead we will pass on the url of the download and the local file
+        // where it is saved
+        parameters.onload({file: f.resolve(), url: parameters.url});
+      } else {
+        parameters.onload(this.responseText);
+      }
       MarchHare.xhrReleaseSemaphore();
     });
+
+    if (Titanium.Platform.name != 'android' && 
+        (typeof parameters.file != 'undefined')) {
+      MarchHare.xhr.file = Titanium.Filesystem.getFile(
+        Titanium.Filesystem.applicationDataDirectory,
+        parameters.file);
+    } 
 
     MarchHare.xhr.open("GET", parameters.url);
     Ti.API.debug('MarchHare.xhrProcess url: '+ parameters.url);
