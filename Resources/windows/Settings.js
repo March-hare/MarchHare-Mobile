@@ -137,6 +137,36 @@
 
     GPSRow.add(GPSField);
     appSettingsSection.add(GPSRow);
+
+    // Vibrate on new incident
+		var VibRow = Ti.UI.createTableViewRow();
+
+    var VibLabel = Ti.UI.createLabel({ 
+      text: 'Vibrate on new report: ', 
+      top: 0, left: 0, top: 10,
+      color: '#fff' });
+    VibRow.add(VibLabel);
+
+    var VibField = Ti.UI.createSwitch( { 
+      top: 5, right: 10,
+      style:Ti.UI.Android.SWITCH_STYLE_CHECKBOX,
+      value: Ti.App.Properties.getBool('vibrate', false)
+    });
+
+    // Save changes, and let the application know on success
+    VibField.
+      addEventListener("change", function(e) {
+        Ti.App.Properties.setBool('vibrate', e.value);
+        alert.message = 'Your changes have been saved';
+
+        alert.show();
+        setTimeout(function() {
+          alert.hide()
+        }, 2000); 
+      });
+
+    VibRow.add(VibField);
+    appSettingsSection.add(VibRow);
     sections.push(appSettingsSection);
 
     var categoryFilterSection = Ti.UI.createTableViewSection({
