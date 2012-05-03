@@ -5,21 +5,21 @@
     var tableView;
     incidents = JSON.parse(incidents);
 
-    // TODO: for each incident there should be a table row that
-    // displays the title along with the incident icons.  I am not
-    // sure how to add the icons without the local img store feature
     for (i in incidents) {
       data[i] = Ti.UI.createTableViewRow({
         hasChild: true,
-        title: 'test',
         height: 'auto',
-        message: incidents[i].incident.incidentdescription,
+        description: incidents[i].incident.incidentdescription,
         lat: incidents[i].incident.locationlatitude,
         lon: incidents[i].incident.locationlongitude,
         date: incidents[i].incident.incidentdate,
-        categories: incidents[i].icon
-        // TODO: We will save implementing this for the alerts issue
-        //backgroundColor: (incidents[i].read?'black':'grey')
+        id: incidents[i].incident.incidentid,
+        categories: incidents[i].icon,
+        ended: incidents[i].incident,
+        backgroundColor: ((incidents[i].incident.incidentread) ? '#000000' : '#404040')
+      });
+      data[i].addEventListener('click', function(e) {
+        e.rowData.backgroundColor = '#000000';
       });
 
       data[i].add(Ti.UI.createLabel({
@@ -30,8 +30,23 @@
       // TODO: It's possible that there are empty strings in incidents[i].icon
       // this is probably a bug in MarchHare.database.getIncidentsJSON or else
       // where that needs to get fixed.
+      var filere = /^file:\/\/\//;
+      var file;
       for (j in incidents[i].icon) {
         if (!incidents[i].icon[j].length) { continue; }
+
+        // If it is a file make sure it exists
+        if (incidents[i].icon[j].match(filere)) {
+          file = Titanium.Filesystem.getFile(incidents[i].icon[j]);
+          if (!file.exists()) {
+            continue;
+          }
+        } else {
+          // TODO: the Titanium.UI.createImageView actually does not accept
+          // web urls as arguments for backgroundImage :(
+          continue;
+        }
+
         data[i].add(Titanium.UI.createImageView({
           backgroundImage: incidents[i].icon[j],
           top: 40, width: 16, height: 16, left: 20*j
@@ -57,7 +72,6 @@
     });
     var view = MarchHare.ui.createReportsView();
     view.addEventListener('click', function(e) {
-      Ti.API.debug('MarchHare.ui.createReportsView clickHandler e:'+ JSON.stringify(e));
       var infowin = Titanium.UI.createWindow({
         modal:true,
         title:e.rowData.title
@@ -67,6 +81,9 @@
         backgroundColor: 'black',
         color: 'white'
       });
+
+      MarchHare.database.setIncidentRead(e.rowData.id, true);
+      e.row.backgroundColor = '#000000';
 
       // TODO: add the location name 
       view.add(
@@ -78,7 +95,7 @@
       // From: http://bit.ly/GMVY7v
       view.add(
         Ti.UI.createLabel({ 
-          text: e.rowData.message, 
+          text: e.rowData.description, 
           left: 0
         }));
 
