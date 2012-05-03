@@ -267,7 +267,6 @@
       // thread/fork bomb the application if not done correctly
       var icon = rows.fieldByName('icon');
       var title = rows.fieldByName('title');
-      Ti.API.debug('rows.isValidRow('+ct+') category:'+title);
       var decayimageicon = rows.fieldByName('decayimage');
 
       //TODO: checkout Appcelerator-KitchenSink/Resources/examples/xhr_filedownload.js
@@ -326,6 +325,17 @@
 
     Ti.API.debug('database.js downloadCategoryIcons decayimage icon finished');
     clearInterval(intervals[this.decayIcon]);
+  }
+
+  MarchHare.database.getFilteredCategoryArray = function() {
+    var query = 'SELECT id FROM categories WHERE filter=1';
+    var result = db.execute(query);
+    var categories = [];
+    while (result.isValidRow()) {
+      categories.push(result.fieldByName('id'));
+      result.next();
+    }
+    return categories;
   }
 
   MarchHare.database.setIncident = function(incident) {
@@ -408,15 +418,30 @@
 
   }
 
-  // TODO: this needs to be rewritten so it does not create multiple rows for 
-  // each category.
-  MarchHare.database.getIncident = function(incident) {
-    var query;
+  MarchHare.database.setIncidentRead = function(id, read) {
+    // sanity check our arguments
+    if (
+      typeof id !== 'number' ||
+      typeof read !== 'boolean'
+      ){
+      return false;
+    }
 
-    query = 'SELECT * FROM incidents '+
+    // make sure the incident exists
+    var rows = MarchHare.database.getIncident({incidentid: id});
+    if (rows.rowCount == 0) {
+      return false;
+    }
+
+    var query = 'UPDATE incidents SET read='+((read)?1:0)+' WHERE id='+id;
+    return db.execute(query);
+  }
+
+  MarchHare.database.getIncident = function(incident) {
+    var query = 'SELECT * FROM incidents '+
           'WHERE id='+ incident.incidentid;
 
-    return db.execute(query);
+    return result = db.execute(query);
   };
 
   MarchHare.database.getIncidentJSON = function(incident) {
@@ -464,7 +489,8 @@
   MarchHare.database.getFilteredIncidents = function() {
     // Get a list of all category ids that we are filtering by
     var query = 'select incidents.id, incidents.title, incidents.description, '+
-      'incidents.date, incidents.lat, incidents.lon, incidents.ended from incidents '+
+      'incidents.date, incidents.lat, incidents.lon, incidents.ended, '+
+      'incidents.read FROM incidents '+
       'join incident_categories on '+
         '(incidents.id = incident_categories.incident_id) '+
       'join categories on '+
@@ -493,7 +519,8 @@
           incidentdate: rows.fieldByName('date'),
           locationlatitude: rows.fieldByName('lat'),
           locationlongitude: rows.fieldByName('lon'),
-          incidenthasended: rows.fieldByName('ended')
+          incidenthasended: rows.fieldByName('ended'),
+          incidentread: rows.fieldByName('read')
         },
         icon: []
       };
@@ -691,13 +718,30 @@
   }
 
   function testDatabaseIncidentsInit() {
-    result = JSON.parse(MarchHare.database.getIncidentsJSON());
+    var result = JSON.parse(MarchHare.database.getIncidentsJSON());
     Ti.API.debug('database.js::testDatabase: intialized incidents:');
     for (i in result) {
       var output = 'incidents.id='+result[i].incident.incidentid+', '+
         'incidents.title='+result[i].incident.incidenttitle +', icons= '+        JSON.stringify(result[i].icon);
       Ti.API.debug(output);
     }
+
+    // Get a non existing incident
+    result = MarchHare.database.getIncident({incidentid: 3117});
+    Ti.API.debug('database.js::testDatabase: non existing incident returned '+ 
+      result.rowCount +' rows');
+
+    // Set read for some incident
+    var query = 'SELECT * FROM incidents LIMIT 1';
+    var rows = db.execute(query);
+    var id = rows.fieldByName('id');
+    Ti.API.debug('database.js::testDatabase: setIncidentRead('+id+', true) before '+ 
+      rows.fieldByName('read'));
+    MarchHare.database.setIncidentRead(id, true);
+    query = 'SELECT * FROM incidents where id='+id;
+    rows = db.execute(query);
+    Ti.API.debug('database.js::testDatabase: setIncidentRead('+id+', true) after '+ 
+      rows.fieldByName('read'));
 
   }
 

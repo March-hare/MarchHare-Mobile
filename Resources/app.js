@@ -1,4 +1,4 @@
-var DEV = true;
+var DEV = false;
 var POLLING = false;
 Ti.App.Properties.setBool('map_initialized', false);
 
@@ -283,10 +283,10 @@ function handleServerResponse(response) {
     }
   } else {
 
+    var categories = MarchHare.database.getFilteredCategoryArray();
     // TODO: this finishes before the settings are sent to the map, so it does
     // not actually load until after the next poll
     for ( var i  in jNewIncidents.payload.incidents) {
-      newIncidents = true;
       var incident = {
         incident: {
           incidentid: jNewIncidents.payload.incidents[i].incident.incidentid,
@@ -305,6 +305,17 @@ function handleServerResponse(response) {
       } else {
         MarchHare.database.setIncident(incident);
       }
+
+      // if we already found a newIncident we dont have to keep checking
+      if (!newIncidents) {
+        // Loop across the assigned categories to see if it is one we are i
+        // interested in
+        for (j in jNewIncidents.payload.incidents[i].categories) {
+          if (jNewIncidents.payload.incidents[i].categories[j].category.id in categories) {
+            newIncidents = true;
+          }
+        }
+      }
     }
   }
 
@@ -315,6 +326,12 @@ function handleServerResponse(response) {
 
   } else {
     Ti.API.debug('pollReports: not updating because we did not recieve any new reports');
+  }
+
+  // Create a notification if we recieved new incidents
+  if (newIncidents && Ti.App.Properties.getBool('vibrate', false)) {
+    Ti.API.debug('pollReports: triggering an alert');
+    Titanium.Media.vibrate();
   }
 
   if (!error) {
