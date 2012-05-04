@@ -3,15 +3,10 @@ var MarchHare = {
   ui: {},
   database: {},
   xhr: Ti.Network.createHTTPClient(),
-  //xhrIndicator: Titanium.UI.createActivityIndicator({ height:50, width:10 }),
   xhrGetSemaphore: function(message) {
     if (MarchHare.xhrSemaphore) {
       return false;
     } else {
-      if (typeof message != 'undefined') {
-        //MarchHare.xhrIndicator.message = message;
-        //MarchHare.xhrIndicator.show();
-      }
       return MarchHare.xhrSemaphore = true;
     }
   },
@@ -19,7 +14,6 @@ var MarchHare = {
     // It's possible that the indicator is not visible, will this be an
     // issue?  Also will the map app be useable when the indicator is 
     // displayed?
-    //MarchHare.xhrIndicator.hide();
     MarchHare.xhrSemaphore = false;
   },
   xhrLogServerError: function(e, url) {

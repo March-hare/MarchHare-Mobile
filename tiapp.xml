@@ -11,11 +11,11 @@
     <sdk-version>1.8.2</sdk-version>
     <id>org.marchhare.natog82012</id>
     <name>NATO-G8 2012</name>
-    <version>1.0</version>
-    <publisher>evoltech</publisher>
+    <version>Beta RC1</version>
+    <publisher>March-Hare Communications Collective</publisher>
     <url>http://march-hare.org</url>
-    <description>not specified</description>
-    <copyright>2012 by evoltech</copyright>
+    <description>Mobile application for receving on the ground information during the 2012 Chicago protest of NATO/G8</description>
+    <copyright>2012 by March-Hare Communications Collective</copyright>
     <icon>appicon.png</icon>
     <persistent-wifi>false</persistent-wifi>
     <prerendered-icon>false</prerendered-icon>
@@ -37,10 +37,10 @@
         </orientations>
     </iphone>
     <android xmlns:android="http://schemas.android.com/apk/res/android">
-    <manifest>
-    	<uses-permission android:name="android.permission.ACCESS_GPS" /> 
-    	<uses-permission android:name="android.permission.ACCESS_LOCATION" />
-    </manifest>
+        <manifest>
+            <uses-permission android:name="android.permission.ACCESS_GPS"/>
+            <uses-permission android:name="android.permission.ACCESS_LOCATION"/>
+        </manifest>
     </android>
     <modules/>
 </ti:app>

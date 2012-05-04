@@ -111,7 +111,7 @@
 
     var GPSLabel = Ti.UI.createLabel({ 
       text: 'Update map w/ GPS: ', 
-      top: 0, left: 0, top: 10,
+      top: 0, left: 0,
       color: '#fff' });
     GPSRow.add(GPSLabel);
 
@@ -143,7 +143,7 @@
 
     var VibLabel = Ti.UI.createLabel({ 
       text: 'Vibrate on new report: ', 
-      top: 0, left: 0, top: 10,
+      top: 0, left: 0,
       color: '#fff' });
     VibRow.add(VibLabel);
 
@@ -188,7 +188,7 @@
 
       var categoryLabel = Ti.UI.createLabel({
         text: categories[i].title+': ', 
-        top: 0, left: 0, top: 10,
+        top: 0, left: 0,
         color: '#fff' });
       categoryRow.add(categoryLabel);
 
