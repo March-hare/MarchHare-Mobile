@@ -117,7 +117,7 @@
 
     var GPSField = Ti.UI.createSwitch( { 
       top: 5, right: 10,
-      style:Ti.UI.Android.SWITCH_STYLE_CHECKBOX,
+      style: (Titanium.Platform.osname == 'android') && Ti.UI.Android.SWITCH_STYLE_CHECKBOX,
       value: Ti.App.Properties.getBool('gpsFollow', 
         MarchHare.settings.gpsFollow.default_value)
     });
@@ -149,7 +149,7 @@
 
     var VibField = Ti.UI.createSwitch( { 
       top: 5, right: 10,
-      style:Ti.UI.Android.SWITCH_STYLE_CHECKBOX,
+      style: (Titanium.Platform.osname == 'android') && Ti.UI.Android.SWITCH_STYLE_CHECKBOX,
       value: Ti.App.Properties.getBool('vibrate', false)
     });
 
@@ -194,7 +194,7 @@
 
       var categorySwitch = Ti.UI.createSwitch({
         top: 5, right: 10,
-        style:Ti.UI.Android.SWITCH_STYLE_CHECKBOX,
+				style: (Titanium.Platform.osname == 'android') && Ti.UI.Android.SWITCH_STYLE_CHECKBOX,
         category_id: categories[i].id,
         value: categories[i].filter ? true : false
       });

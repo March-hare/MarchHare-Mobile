@@ -15,7 +15,11 @@
     db  = Ti.Database.install('incidents.sqllite', 'incidents');
   }
   */
-  db  = Ti.Database.install('incidents.sqlite', 'incidents');
+  if (Ti.Platform.name === 'android') {
+		db  = Ti.Database.install('incidents.sqlite', 'incidents');
+	} else {
+		db  = Ti.Database.install('march-hare/incidents.sqlite', 'incidents');
+	}
 
   var databaseIndicator = Titanium.UI.createActivityIndicator({ height:50, width:10 });
 
@@ -148,7 +152,7 @@
       // If we cant set the semaphore then we do not have access to the HTTP 
       // Client yet.
       if (!MarchHare.xhrGetSemaphore('Initializing categories')) {
-        Ti.API.info('Delaying categories request because the HTTP Client is in use.');
+        //Ti.API.info('Delaying categories request because the HTTP Client is in use.');
         return;
       }
 
@@ -292,8 +296,7 @@
     // Client yet.
     if (!MarchHare.xhrGetSemaphore(
         'Downloading '+this.title+' icon')) {
-      Ti.API.info(
-        'Delaying category icon request because the HTTP Client is in use.');
+      //Ti.API.info( 'Delaying category icon request because the HTTP Client is in use.');
       return;
     }
 
@@ -312,8 +315,7 @@
     // Client yet.
     if (!MarchHare.xhrGetSemaphore(
         'Downloading '+this.title+' decayimage icon')) {
-      Ti.API.info(
-        'Delaying decayimage icon request because the HTTP Client is in use.');
+      //Ti.API.info( 'Delaying decayimage icon request because the HTTP Client is in use.');
       return;
     }
 

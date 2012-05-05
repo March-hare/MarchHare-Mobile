@@ -1,4 +1,4 @@
-var DEV = false;
+var DEV = true;
 var POLLING = false;
 Ti.App.Properties.setBool('map_initialized', false);
 
@@ -18,12 +18,9 @@ Ti.include(
 
 var reportsInitialized = false;
 
-var win = MarchHare.ui.createMapWindow();
-
-win.open();
 
 if (Ti.Platform.osname == 'android') {
-  var win = Ti.UI.currentWindow;
+	var win = MarchHare.ui.createMapWindow();
   var activity = Ti.Android.currentActivity;
 
   activity.onCreateOptionsMenu = function(e){
@@ -39,21 +36,42 @@ if (Ti.Platform.osname == 'android') {
       settingsWin.open({});
     });
   };
+	win.open();
 } 
-/*
 else {
-  // TODO: create iOS options menu
-  // iOS code might look something like this:  where iconWin is an actuall
-  // icon?  I am not sure how menus are done in iOS
-  var rightButton = Ti.UI.createButton({
-      systemButton: Ti.UI.iPhone.SystemButton.REFRESH
-  });
-  iconWin.rightNavButton = rightButton;
-  rightButton.addEventListener('click', function () {
-      Ti.fireEvent('codestrong:update_data');
-  });
+	Titanium.UI.setBackgroundColor('#000');
+
+	// Create a tab group
+	var tabGroup = Titanium.UI.createTabGroup({id: 'tabGroup1'});
+
+	// Create Main tab
+	var mapTab = Titanium.UI.createTab({
+		title: 'Map',
+		window: MarchHare.ui.createMapWindow()
+	});
+
+	// Create settings win/tab
+	var settingsTab = Titanium.UI.createTab({
+		title: 'Settings',
+		window: MarchHare.ui.createSettingsWindow()
+	});
+
+	// Create reports win/tab
+	var reportsTab = Titanium.UI.createTab({
+		title: 'Reports',
+		window: MarchHare.ui.createSettingsWindow()
+	});
+
+	// Add tabs
+	tabGroup.add(mapTab);
+	tabGroup.add(settingsTab);
+	tabGroup.add(reportsTab);
+
+	tabGroup.setActiveTab(mapTab);
+	tabGroup.open({
+		transition: Titanium.UI.iPhone.AnimationStyle.FLIP_FROM_LEFT
+	});
 }
-*/
 
 // Set the handler for whe the action midpoint is recieved
 // In testing this event does not get recieved until after the settings are 
