@@ -15,7 +15,11 @@
     db  = Ti.Database.install('incidents.sqllite', 'incidents');
   }
   */
-  db  = Ti.Database.install('incidents.sqlite', 'incidents');
+  if (Ti.Platform.name === 'android') {
+		db  = Ti.Database.install('incidents.sqlite', 'incidents');
+	} else {
+		db  = Ti.Database.install('march-hare/incidents.sqlite', 'incidents');
+	}
 
   var databaseIndicator = Titanium.UI.createActivityIndicator({ height:50, width:10 });
 

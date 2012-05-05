@@ -1,9 +1,16 @@
 (function () {
   MarchHare.ui.createMapView = function() {
+		var url;
+  	if (Ti.Platform.name === 'android') {
+			url = '../pages/map.html';
+		} else {
+			url = 'pages/map.html';
+		}
+
     var webview = Ti.UI.createWebView({ 
-      url: '../pages/map.html',
-      touchEnabled: true
-    });
+			url: url,
+			touchEnabled: true
+		});
 
     // TODO: The gestures below need to be supported
     // https://wiki.appcelerator.org/display/guides/Supporting+Gestures
@@ -34,7 +41,7 @@
 
   MarchHare.ui.createMapWindow = function() {
     var win = Ti.UI.createWindow({
-      title: 'In the streets',
+      title: 'Map',
       exitOnClose: true,
     });
 
