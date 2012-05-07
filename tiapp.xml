@@ -37,10 +37,11 @@
         </orientations>
     </iphone>
     <android xmlns:android="http://schemas.android.com/apk/res/android">
-        <manifest>
+        <manifest android:versionCode="2" android:versionName="Smokes">
             <uses-permission android:name="android.permission.ACCESS_GPS"/>
             <uses-permission android:name="android.permission.ACCESS_LOCATION"/>
         </manifest>
+        
     </android>
     <modules/>
 </ti:app>

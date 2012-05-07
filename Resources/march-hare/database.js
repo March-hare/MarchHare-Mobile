@@ -148,7 +148,6 @@
       // If we cant set the semaphore then we do not have access to the HTTP 
       // Client yet.
       if (!MarchHare.xhrGetSemaphore('Initializing categories')) {
-        Ti.API.info('Delaying categories request because the HTTP Client is in use.');
         return;
       }
 
@@ -292,8 +291,6 @@
     // Client yet.
     if (!MarchHare.xhrGetSemaphore(
         'Downloading '+this.title+' icon')) {
-      Ti.API.info(
-        'Delaying category icon request because the HTTP Client is in use.');
       return;
     }
 
@@ -312,8 +309,6 @@
     // Client yet.
     if (!MarchHare.xhrGetSemaphore(
         'Downloading '+this.title+' decayimage icon')) {
-      Ti.API.info(
-        'Delaying decayimage icon request because the HTTP Client is in use.');
       return;
     }
 
@@ -570,7 +565,6 @@
       // If we cant set the semaphore then we do not have access to the HTTP 
       // Client yet.
       if (!MarchHare.xhrGetSemaphore()) {
-        Ti.API.info('Delaying reports request because the HTTP Client is in use.');
         return;
       }
 
@@ -635,7 +629,6 @@
       // If we cant set the semaphore then we do not have access to the HTTP 
       // Client yet.
       if (!MarchHare.xhrGetSemaphore('Initializing action location')) {
-        Ti.API.info('Delaying geographic_midpoint request because the HTTP Client is in use.');
         return;
       }
 
