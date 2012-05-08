@@ -128,14 +128,6 @@
   // If you want to force an initilization of the categories just flush them
   // first with MarchHare.database.flushCategories()
   MarchHare.database.initializeCategories = function() {
-    // Unless we are forcing a category refresh check to see if we have any
-    // categories already.  If so then return;
-    var query = 'SELECT count(*) as count from categories';
-    var rows = db.execute(query);
-    if (rows.isValidRow() && rows.fieldByName('count') > 0) {
-      return;
-    }
-
     var url = 'http://'+ 
         Ti.App.Properties.getString('action_domain',
         MarchHare.settings.action_domain.default_value)+

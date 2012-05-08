@@ -3,12 +3,14 @@
   // seem to be a way to create dynamic preference lists
   //
   // The example used to create this was pulled from: http://bit.ly/KbLUA7
-  
+ 
+	// We do not use modal windows on iOS
+	var useModal = (Ti.Platform.osname == 'android') ? true : false;
   MarchHare.ui.createSettingsWindow = function() {
     var win = Ti.UI.createWindow({ 
-      backgroundColor: '#000',
+      //backgroundColor: '#000',
       title: 'Settings',
-      modal: true 
+      modal: useModal
     });
 
     var sections = new Array;
@@ -17,14 +19,15 @@
         headerTitle: "Application Settings"
     });
 
-    var domainRow = Ti.UI.createTableViewRow();
+    var domainRow = Ti.UI.createTableViewRow({ height: 50 });
 
     // TODO: this should actually all be wrapped in a table with each setting 
     // that is not a checkbox diverted to its own modal window
     var domainLabel = Ti.UI.createLabel({ 
       text: 'Action Domain: ', 
       top: 0, left: 0,
-      color: '#fff' });
+      //color: '#fff' 
+		});
 
     domainRow.add(domainLabel);
 
@@ -32,8 +35,7 @@
     // want to use.  We will have to change this dependent on a new property
     // in the MarchHare.settings list
     var domainField = Ti.UI.createTextField( { 
-      //top:20, left:0, width: 200,
-      left:0, width: 200, top: 20,
+      left:0, width: 200, top: 30,
       hintText: Ti.App.Properties.getString('action_domain', 
         MarchHare.settings.action_domain.default_value),
       autoCorrect: false,
@@ -74,7 +76,8 @@
     var pollLabel = Ti.UI.createLabel({ 
       text: 'Poll Frequency in Seconds:', 
       top: 10, left: 0,
-      color: '#fff' });
+      //color: '#fff' 
+		});
     pollRow.add(pollLabel);
 
     var pollField = Ti.UI.createTextField( { 
@@ -112,7 +115,8 @@
     var GPSLabel = Ti.UI.createLabel({ 
       text: 'Update map w/ GPS: ', 
       top: 0, left: 0,
-      color: '#fff' });
+      //color: '#fff' 
+		});
     GPSRow.add(GPSLabel);
 
     var GPSField = Ti.UI.createSwitch( { 
@@ -144,7 +148,8 @@
     var VibLabel = Ti.UI.createLabel({ 
       text: 'Vibrate on new report: ', 
       top: 0, left: 0,
-      color: '#fff' });
+      //color: '#fff' 
+		});
     VibRow.add(VibLabel);
 
     var VibField = Ti.UI.createSwitch( { 
@@ -174,6 +179,7 @@
     });
 
     // Get all of the categories
+		var categoryFiltersUpdated = false;
     var categories = MarchHare.database.getCategoriesJSON();
     categories = JSON.parse(categories);
     for (i in categories) {
@@ -189,7 +195,8 @@
       var categoryLabel = Ti.UI.createLabel({
         text: categories[i].title+': ', 
         top: 0, left: 0,
-        color: '#fff' });
+        //color: '#fff' 
+			});
       categoryRow.add(categoryLabel);
 
       var categorySwitch = Ti.UI.createSwitch({
@@ -206,6 +213,7 @@
       categorySwitch.
         addEventListener("change", function(e) {
           MarchHare.database.setCategoryFilter(e.source.category_id, e.value);
+					categoryFiltersUpdated = true;
         });
       categoryRow.add(categorySwitch);
 
@@ -219,12 +227,23 @@
 
     win.add(tableView);
 
+		// With Android modal windows we close the settings window, but with iOS we blur the window
     win.addEventListener('close', function() {
-      Ti.App.fireEvent('filterReports');
+			if (categoryFiltersUpdated) {
+				categoryFiltersUpdated = false;
+				Ti.App.fireEvent('filterReports');
+			}
+    });
+
+    win.addEventListener('blur', function() {
+			if (categoryFiltersUpdated) {
+				categoryFiltersUpdated = false;
+				Ti.App.fireEvent('filterReports');
+			}
     });
 
     return win;
   }
   
-  Ti.API.debug('Settings.js loaded');
+  Ti.API.log('Settings.js loaded');
 })();
