@@ -32,7 +32,7 @@
       settings.zoom = Ti.App.Properties.getInt('zoom', MarchHare.settings.zoom.default_value);
       settings.action_domain = Ti.App.Properties.getString('action_domain', MarchHare.settings.action_domain.default_value);
       settings.poll = Ti.App.Properties.getString('poll', MarchHare.settings.poll.default_value);
-      Ti.API.debug('load event for mapview caught, sending settings');
+      Ti.API.log('load event for mapview caught, sending settings');
       Ti.App.fireEvent('mapWindowLoaded', settings);
     });
 

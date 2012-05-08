@@ -1,10 +1,9 @@
-var DEV = true;
+var DEV = false;
 var POLLING = false;
 Ti.App.Properties.setBool('map_initialized', false);
 
 // this sets the background color of the master UIView (when there are no windows/tab groups on it)
 Titanium.UI.setBackgroundColor('#000');
-Ti.API.debug('including the app helpers and windows');
 
 Ti.include(
     'march-hare/march-hare.js',
@@ -18,6 +17,8 @@ Ti.include(
 
 var reportsInitialized = false;
 
+var tabGroup;
+var mapTab;
 
 if (Ti.Platform.osname == 'android') {
 	var win = MarchHare.ui.createMapWindow();
@@ -39,43 +40,74 @@ if (Ti.Platform.osname == 'android') {
 	win.open();
 } 
 else {
-	Titanium.UI.setBackgroundColor('#000');
-
 	// Create a tab group
-	var tabGroup = Titanium.UI.createTabGroup({id: 'tabGroup1'});
+	tabGroup = Titanium.UI.createTabGroup();
 
 	// Create Main tab
-	var mapTab = Titanium.UI.createTab({
+	var mapWin = MarchHare.ui.createMapWindow();
+	mapTab = Titanium.UI.createTab({
 		title: 'Map',
-		window: MarchHare.ui.createMapWindow()
-	});
-
-	// Create settings win/tab
-	var settingsTab = Titanium.UI.createTab({
-		title: 'Settings',
-		window: MarchHare.ui.createSettingsWindow()
+		icon: '/img/KS_nav_map.png',
+		window: mapWin
 	});
 
 	// Create reports win/tab
+	var reportsWin = MarchHare.ui.createReportsWindow();
 	var reportsTab = Titanium.UI.createTab({
 		title: 'Reports',
-		window: MarchHare.ui.createSettingsWindow()
+		icon: '/img/KS_nav_ui.png',
+		window: reportsWin
 	});
 
 	// Add tabs
-	tabGroup.add(mapTab);
-	tabGroup.add(settingsTab);
-	tabGroup.add(reportsTab);
+	tabGroup.addTab(mapTab);
+	tabGroup.addTab(reportsTab);
 
 	tabGroup.setActiveTab(mapTab);
-	tabGroup.open({
-		transition: Titanium.UI.iPhone.AnimationStyle.FLIP_FROM_LEFT
+	tabGroup.open();
+
+	// There is a situation where the windows here can be created before the
+	// incident database is populated.  When there are updates to the db then
+	// we need to recreate these windows because they are not created dynamically
+	// like they are in the modal windows for android
+	Ti.App.addEventListener('categoriesDownloaded', function() {
+		// Create settings win/tab
+		var settingsWin = MarchHare.ui.createSettingsWindow();
+		var settingsTab = Titanium.UI.createTab({
+			title: 'Settings',
+			icon: '/img/KS_nav_views.png',
+			window: settingsWin
+		});
+		tabGroup.addTab(settingsTab);
+	});
+
+	Ti.App.addEventListener('filterReports', function() {
+		tabGroup.removeTab(reportsTab);
+		reportsWin = MarchHare.ui.createReportsWindow();
+		reportsTab = Titanium.UI.createTab({
+			title: 'Reports',
+			icon: '/img/KS_nav_ui.png',
+			window: reportsWin
+		});
+		tabGroup.addTab(reportsTab);
+	});
+
+	Ti.App.addEventListener('newIncidents', function() {
+		tabGroup.removeTab(reportsTab);
+		reportsWin = MarchHare.ui.createReportsWindow();
+		reportsTab = Titanium.UI.createTab({
+			title: 'Reports',
+			icon: '/img/KS_nav_ui.png',
+			window: reportsWin
+		});
+		tabGroup.addTab(reportsTab);
 	});
 }
 
 // Set the handler for whe the action midpoint is recieved
 // In testing this event does not get recieved until after the settings are 
 // sent to the map view
+// TODO: Does this create a memory leak?
 Ti.App.addEventListener('geolocationDownloaded', function() {
   updatedActionMidPoint();
 });
@@ -85,11 +117,13 @@ Ti.App.addEventListener('geolocationDownloaded', function() {
 // TODO: test with these settings off
 if (DEV) { 
   Ti.App.Properties.setString('lastpoll', '1970-01-01');
+	MarchHare.database.flushCategories(); 
+	MarchHare.database.flushIncidentCategories(); 
   MarchHare.database.flushIncidents(); 
-  MarchHare.database.flushIncidentCategories(); 
-  MarchHare.database.flushCategories(); 
   Ti.App.Properties.setInt('poll', MarchHare.settings.poll.default_value);
 }
+
+// Force a lookup of all categories everytime the application starts
 MarchHare.database.initializeCategories();
 MarchHare.database.initializeMidPoint();
 
@@ -109,7 +143,7 @@ Ti.App.addEventListener('readyForReports', function() {
 // recieve this event.  Which means we have a race condition.  The effects
 // of this should be investigated.
 Ti.App.addEventListener('actionDomainChanged', function() {
-  Ti.API.debug('actionDomainChanged event recieved, updating system');
+  Ti.API.log('actionDomainChanged event recieved, updating system');
   Ti.App.Properties.setString('lastpoll', '1970-01-01');
   MarchHare.database.flushIncidents(); 
   MarchHare.database.flushIncidentCategories(); 
@@ -121,9 +155,9 @@ Ti.App.addEventListener('actionDomainChanged', function() {
 
 var pollInterval;
 Ti.App.addEventListener('mapInitialized', function() {
-  Ti.API.debug('mapInitialized event recieved');
+  Ti.API.log('mapInitialized event recieved');
   Ti.App.Properties.setBool('map_initialized', true);
-  Ti.API.debug('polling for new reports every '+
+  Ti.API.log('polling for new reports every '+
     Ti.App.Properties.getInt('poll', MarchHare.settings.poll.default_value)*1000 +
     ' seconds');
   pollInterval = setInterval(pollForReports, 
@@ -132,7 +166,7 @@ Ti.App.addEventListener('mapInitialized', function() {
 });
 
 Ti.App.addEventListener('pollIntervalChanged', function() {
-  Ti.API.debug('pollIntervalChanged event recieved, updating poll interval');
+  Ti.API.log('pollIntervalChanged event recieved, updating poll interval');
   clearInterval(pollInterval);
   pollInterval = setInterval(pollForReports, 
     Ti.App.Properties.getString('poll', MarchHare.settings.poll.default_value) 
@@ -155,14 +189,14 @@ if (Ti.App.Properties.getBool('gpsFollow',
 }
 
 Ti.App.addEventListener('gpsFollowChanged', function() {
-  Ti.API.debug('gpsFollowChanged ('+
+  Ti.API.log('gpsFollowChanged ('+
     Ti.App.Properties.getBool('gpsFollow', 'NOT SET')+
     ') event recieved, updating location polling');
   if (Ti.App.Properties.getBool('gpsFollow', 
     MarchHare.settings.gpsFollow.default_value)) {
     Titanium.Geolocation.addEventListener('location', updateGeoLocationHandler);
   } else {
-    Ti.API.debug('gpsFollowChanged event recieved, clearing gps interval');
+    Ti.API.log('gpsFollowChanged event recieved, clearing gps interval');
 
     // This handles the privacy concern of a user turning off gpsFollow on 
     // their device then getting their phone confiscated and the saved location
@@ -177,7 +211,7 @@ Ti.App.addEventListener('gpsFollowChanged', function() {
 });
 
 function updateGeoLocationHandler(location) {
-  Ti.API.debug('app.js::updateGeoLocationHandler() location: '+ 
+  Ti.API.log('app.js::updateGeoLocationHandler() location: '+ 
     JSON.stringify(location));
 
   // Titanium.Geolocation.location: http://bit.ly/GG6qri
@@ -206,7 +240,7 @@ function updateGeoLocation() {
   });
 
   if( Titanium.Geolocation.locationServicesEnabled === false ) {
-    Ti.API.debug('app.js::updateGeoLocation() device has GPS turned off.');
+    Ti.API.log('app.js::updateGeoLocation() device has GPS turned off.');
     alert.message = 'Your device has GPS turned off. Please turn it on.';
     alert.show();
     setTimeout(function() {
@@ -225,7 +259,7 @@ function updateGeoLocation() {
       return;
     }
  
-    Ti.API.debug('app.js::updateGeoLocation location: '+ 
+    Ti.API.log('app.js::updateGeoLocation location: '+ 
       JSON.stringify(location.coords));
     // TODO: saving geo location on the device could be
     // a privacy concern.  Can we get around this?  For
@@ -338,18 +372,17 @@ function handleServerResponse(response) {
   }
 
   if (newIncidents || !initialized) {
-    Ti.API.debug('pollReports: firing updateReports event, map_initialized: '+
+    Ti.API.log('pollReports: firing updateReports event, map_initialized: '+
       initialized +', newIncidents: '+ newIncidents);
     updatedReportsAction();
 
   } else {
-    Ti.API.debug('pollReports: not updating because we did not recieve any new reports');
+    Ti.API.log('pollReports: not updating because we did not recieve any new reports');
   }
 
-  // Create a notification if we recieved new incidents
-  if (newIncidents && Ti.App.Properties.getBool('vibrate', false)) {
-    Ti.API.debug('pollReports: triggering an alert');
-    Titanium.Media.vibrate();
+  // Let other interested parties do what they want with newIncidents
+  if (newIncidents) {
+		Ti.App.fireEvent('newIncidents');
   }
 
   if (!error) {
@@ -358,8 +391,20 @@ function handleServerResponse(response) {
 }
 
 Ti.App.addEventListener('filterReports', function() {
+	Ti.API.log('filterReports event recieved');
   updatedReportsAction();
 });
+
+Ti.App.addEventListener('newIncidents', function() {
+  notifyUser();
+});
+
+function notifyUser() {
+ if (Ti.App.Properties.getBool('vibrate', false)) {
+    Ti.API.log('Vibrating the phone');
+    Titanium.Media.vibrate();
+	}
+}
 
 function updatedReportsAction() {
   result = MarchHare.database.getIncidentsJSON({});

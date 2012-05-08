@@ -8,7 +8,7 @@
         <target device="android">true</target>
         <target device="blackberry">false</target>
     </deployment-targets>
-    <sdk-version>2.0.1.GA2</sdk-version>
+    <sdk-version>1.8.2</sdk-version>
     <id>org.marchhare.natog82012</id>
     <name>NATO-G8 2012</name>
     <version>Beta RC1</version>
