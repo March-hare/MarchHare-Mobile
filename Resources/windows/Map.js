@@ -45,8 +45,6 @@
       exitOnClose: true,
     });
 
-    Ti.API.log('About to add map view: ');
-
     win.add( MarchHare.ui.createMapView() );
 
     return win;
