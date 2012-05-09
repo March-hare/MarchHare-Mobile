@@ -15,6 +15,8 @@
         hasChild: true,
 				height: 50,
 				top: 0,
+        // title is a keyword that we dont want to use here
+        tit: incidents[i].incident.incidenttitle,
         desc: incidents[i].incident.incidentdescription,
         lat: incidents[i].incident.locationlatitude,
         lon: incidents[i].incident.locationlongitude,
@@ -30,27 +32,36 @@
 				MarchHare.database.setIncidentRead(e.rowData.id, true);
 				var infowin = Titanium.UI.createWindow({
 					title: e.rowData.title,
+          backgroundColor: '#000'
 				});
-				var view = Ti.UI.createView({
-					layout:'vertical',
-				});
+        var scrollview = Ti.UI.createScrollView({ layout: 'vertical' });
+				//var view = Ti.UI.createView({ layout:'vertical', });
 
 				e.row.backgroundColor = '#000000';
 
 				// TODO: add the location name 
 				//view.add(
-				infowin.add(
+				//infowin.add(
+        scrollview.add(
+					Ti.UI.createLabel({ 
+						text: 'Title: '+e.rowData.tit, 
+						color: '#FFF', /*top: 20,*/ height: 'auto',
+						left: 0,
+					}));
+
+        scrollview.add(
 					Ti.UI.createLabel({ 
 						text: 'Reported at: '+e.rowData.date, 
-						color: '#FFF', top: 20, height: 'auto',
+						color: '#FFF', /*top: 30,*/ height: 'auto',
 						left: 0,
 					}));
 
 				// From: http://bit.ly/GMVY7v
-				infowin.add(
+				//infowin.add(
+				scrollview.add(
 					Ti.UI.createLabel({ 
 						text: e.rowData.desc, 
-						color: '#FFF', top: 50, height: 'auto',
+						color: '#FFF', /*top: 70,*/ height: 'auto',
 						left: 0,
 					}));
 
@@ -61,32 +72,38 @@
 				closeButton.addEventListener('click', function() {
 					infowin.close();
 				});
+        scrollview.add(closeButton);
 
-				infowin.add(view);
-				infowin.add( closeButton );
+				//infowin.add(view);
+				infowin.add(scrollview);
+				//infowin.add( closeButton );
 				infowin.open({ modal: true });
       });
 
-			data[i].addEventListener('longpress', function(e) {
-				// close this window and center the map on the clicked incident
-				Ti.API.log('reports longclick handler');
+      // It does not seem like android will fire longpresses, but I am not
+      // sure that iOS doesn't fire both
+      if (MarchHare.ui.Android) {
+        data[i].addEventListener('longclick', fireGotoLocation);
+      } else {
+        data[i].addEventListener('longpress', fireGotoLocation);
+      }
+
+      function fireGotoLocation(e) {
+        Ti.API.log('longpress or longclick detected gotoLocation being fired');
 				Ti.App.fireEvent('gotoLocation', {
 					lat: e.rowData.lat,
 					lon: e.rowData.lon
 				});
+      }
 
-				// On Android we close the window
-				// On iOS we change the tabGroup
-				if (Ti.Platform.osname == 'android') {
-					win.close();
-				} else {
-					tabGroup.setActiveTab(mapTab);
-				}
-			});
-
+      // TODO: we should move all formatting stuff like this to jss files
+      var top = -2;
+      if (!MarchHare.ui.Android) {
+        top = -30;
+      }
       data[i].add(Ti.UI.createLabel({
         text: incidents[i].incident.incidenttitle,
-        top: -30, left:0, color: '#FFF'
+        top: top, left:0, color: '#FFF'
       }));
 
       // TODO: It's possible that there are empty strings in incidents[i].icon
@@ -133,7 +150,17 @@
       title: 'Reports',
       modal: useModal
     });
+
     var view = MarchHare.ui.createReportsView();
+
+    // On Android we close the window, iOS we switch tabs
+    Ti.App.addEventListener('gotoLocation', function(e){
+      if (MarchHare.ui.Android) {
+        win.close();
+      } else {
+        tabGroup.setActiveTab(mapTab);
+      }
+    });
 
 		win.add(view);
 		return win;

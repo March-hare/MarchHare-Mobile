@@ -1,6 +1,8 @@
 // TODO: i18n inegration
 var MarchHare = {
-  ui: {},
+  ui: {
+    Android: (Ti.Platform.osname == 'android') ? true : false,
+  },
   database: {},
   xhr: Ti.Network.createHTTPClient(),
   xhrGetSemaphore: function(message) {
