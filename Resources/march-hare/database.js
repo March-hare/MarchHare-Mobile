@@ -201,7 +201,7 @@
   };
 
   MarchHare.database.handleServerResponseCategoryIcon = function(response) {
-    Ti.API.debug('MarchHare.database.handleServerResponseCategoryIcon '+
+    Ti.API.log('MarchHare.database.handleServerResponseCategoryIcon '+
        'category icon downloaded.  Changing reference '+ response.url +
       ' to '+  response.file);
     var query = 'UPDATE categories SET icon=\''+response.file+'\' '+
@@ -210,7 +210,7 @@
   };
 
   MarchHare.database.handleServerResponseDecayIcon = function(response) {
-    Ti.API.debug('MarchHare.database.handleServerResponseDecayIcon '+
+    Ti.API.log('MarchHare.database.handleServerResponseDecayIcon '+
        'decayimage icon downloaded.  Changing reference '+ response.url +
       ' to '+  response.file);
     var query = 'UPDATE categories SET decayimage=\''+response.file+'\' '+
@@ -296,7 +296,7 @@
       onload: MarchHare.database.handleServerResponseCategoryIcon
     });
 
-    Ti.API.debug('database.js downloadCategoryIcons category icon finished');
+    Ti.API.log('database.js downloadCategoryIcons category icon finished');
     clearInterval(intervals[this.icon]);
   }
 
@@ -314,7 +314,7 @@
       onload: MarchHare.database.handleServerResponseDecayIcon
     });
 
-    Ti.API.debug('database.js downloadCategoryIcons decayimage icon finished');
+    Ti.API.log('database.js downloadCategoryIcons decayimage icon finished');
     clearInterval(intervals[this.decayIcon]);
   }
 
@@ -611,7 +611,7 @@
     }
 
     if (!newIncidents) {
-      Ti.API.debug('nitializeIncidents: did not recieve any reports');
+      Ti.API.log('nitializeIncidents: did not recieve any reports');
     }
   }
 
@@ -675,10 +675,10 @@
     // g/s settings
     MarchHare.database.setSetting('test', 'test');
     result = MarchHare.database.getSetting('test');
-    Ti.API.debug('database.js::testDatabase: set test=test, recieved test='+result);
+    Ti.API.log('database.js::testDatabase: set test=test, recieved test='+result);
     MarchHare.database.flushSettings();
     result = MarchHare.database.getSetting('test');
-    Ti.API.debug('database.js::testDatabase: flushed settings, recieved test='+result);
+    Ti.API.log('database.js::testDatabase: flushed settings, recieved test='+result);
 
     // g/s category
     MarchHare.database.flushCategories();
@@ -707,19 +707,19 @@
       }
     };
     var id = MarchHare.database.setIncident(incident);
-    Ti.API.debug('Testing wonky characters in incidents.  Added '+ 
+    Ti.API.log('Testing wonky characters in incidents.  Added '+ 
       JSON.stringify(incident));
-    Ti.API.debug('Testing wonky characters in incidents.  Recieved '+ 
+    Ti.API.log('Testing wonky characters in incidents.  Recieved '+ 
       JSON.stringify(MarchHare.database.getIncidentJSON({incident: { incidentid: 666 }})));
 
   }
 
   function testDatabaseCategoriesInit() {
-    Ti.API.debug('database.js::testDatabase: initialized categories');
+    Ti.API.log('database.js::testDatabase: initialized categories');
     query = 'SELECT * from categories';
     result = db.execute(query);
     while (result.isValidRow()) {
-      Ti.API.debug('database.js::testDatabase: '+
+      Ti.API.log('database.js::testDatabase: '+
         'categories.id='+result.fieldByName('id')+', '+
         'categories.title='+result.fieldByName('title'));
       result.next();
@@ -729,28 +729,28 @@
 
   function testDatabaseIncidentsInit() {
     var result = JSON.parse(MarchHare.database.getIncidentsJSON());
-    Ti.API.debug('database.js::testDatabase: intialized incidents:');
+    Ti.API.log('database.js::testDatabase: intialized incidents:');
     for (i in result) {
       var output = 'incidents.id='+result[i].incident.incidentid+', '+
         'incidents.title='+result[i].incident.incidenttitle +', icons= '+        JSON.stringify(result[i].icon);
-      Ti.API.debug(output);
+      Ti.API.log(output);
     }
 
     // Get a non existing incident
     result = MarchHare.database.getIncident({incidentid: 3117});
-    Ti.API.debug('database.js::testDatabase: non existing incident returned '+ 
+    Ti.API.log('database.js::testDatabase: non existing incident returned '+ 
       result.rowCount +' rows');
 
     // Set read for some incident
     var query = 'SELECT * FROM incidents LIMIT 1';
     var rows = db.execute(query);
     var id = rows.fieldByName('id');
-    Ti.API.debug('database.js::testDatabase: setIncidentRead('+id+', true) before '+ 
+    Ti.API.log('database.js::testDatabase: setIncidentRead('+id+', true) before '+ 
       rows.fieldByName('read'));
     MarchHare.database.setIncidentRead(id, true);
     query = 'SELECT * FROM incidents where id='+id;
     rows = db.execute(query);
-    Ti.API.debug('database.js::testDatabase: setIncidentRead('+id+', true) after '+ 
+    Ti.API.log('database.js::testDatabase: setIncidentRead('+id+', true) after '+ 
       rows.fieldByName('read'));
 
   }

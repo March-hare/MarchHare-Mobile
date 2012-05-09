@@ -311,24 +311,19 @@
     {
       mapOptions = options;
     }
+
+		var arrayOSM = ["http://otile1.mqcdn.com/tiles/1.0.0/osm/${z}/${x}/${y}.jpg",
+			"http://otile2.mqcdn.com/tiles/1.0.0/osm/${z}/${x}/${y}.jpg",
+			"http://otile3.mqcdn.com/tiles/1.0.0/osm/${z}/${x}/${y}.jpg",
+			"http://otile4.mqcdn.com/tiles/1.0.0/osm/${z}/${x}/${y}.jpg"];
     
     // Create the map object
     var map = new OpenLayers.Map(targetElement, mapOptions);
     
-    var osm_mapnik = new OpenLayers.Layer.OSM.Mapnik("OSM Mapnik", {
-      sphericalMercator: true,
-      maxExtent: new OpenLayers.Bounds(-20037508.34,-20037508.34,20037508.34,20037508.34)});
-
-    var osm_tah = new OpenLayers.Layer.OSM.Mapnik("OSM Tiles@Home", {
-      sphericalMercator: true,
-      maxExtent: new OpenLayers.Bounds(-20037508.34,-20037508.34,20037508.34,20037508.34)});
-
-    var osm_cycle = new OpenLayers.Layer.OSM.Mapnik("OSM Cycling Map", {
-      sphericalMercator: true,
-      maxExtent: new OpenLayers.Bounds(-20037508.34,-20037508.34,20037508.34,20037508.34)});
+    var osm_mapquest = new OpenLayers.Layer.OSM("OSM", arrayOSM);
     
     // Add the default layers
-    map.addLayers([osm_mapnik, osm_tah, osm_cycle]);
+    map.addLayers([osm_mapquest]);
     
     // Add controls
     map.addControl(new OpenLayers.Control.Navigation());

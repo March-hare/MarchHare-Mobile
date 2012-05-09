@@ -326,7 +326,7 @@ function handleServerResponse(response) {
       typeof jNewIncidents.error.message != 'undefined'
     ) {
       Ti.API.info('pollReports: '+ jNewIncidents.error.message);
-      Ti.App.Properties.setString('lastpoll', new Date().toISOString());
+      //Ti.App.Properties.setString('lastpoll', new Date().toISOString());
     }
     else {
       Ti.API.error('pollReports: recieved invalid json from the server: '+
@@ -372,6 +372,7 @@ function handleServerResponse(response) {
   }
 
   if (newIncidents || !initialized) {
+    Ti.App.Properties.setString('lastpoll', new Date().toISOString());
     Ti.API.log('pollReports: firing updateReports event, map_initialized: '+
       initialized +', newIncidents: '+ newIncidents);
     updatedReportsAction();
@@ -386,7 +387,7 @@ function handleServerResponse(response) {
   }
 
   if (!error) {
-    Ti.App.Properties.setString('lastpoll', new Date().toISOString());
+    //Ti.App.Properties.setString('lastpoll', new Date().toISOString());
   }
 }
 

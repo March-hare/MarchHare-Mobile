@@ -34,8 +34,13 @@
 					title: e.rowData.title,
           backgroundColor: '#000'
 				});
-        var scrollview = Ti.UI.createScrollView({ layout: 'vertical' });
-				//var view = Ti.UI.createView({ layout:'vertical', });
+        var scrollview = Ti.UI.createScrollView({ 
+					layout: 'vertical',
+					contentHeight: 'auto',
+					contentWidth: 'auto',
+				 });
+        //var scrollview = Ti.UI.createScrollView({ });
+				//var view = Ti.UI.createView({ layout:'vertical' });
 
 				e.row.backgroundColor = '#000000';
 
@@ -45,39 +50,48 @@
         scrollview.add(
 					Ti.UI.createLabel({ 
 						text: 'Title: '+e.rowData.tit, 
-						color: '#FFF', /*top: 20,*/ height: 'auto',
+						color: '#FFF', 
+						top: 20, height: 'auto', 
 						left: 0,
 					}));
 
         scrollview.add(
+        //view.add(
 					Ti.UI.createLabel({ 
 						text: 'Reported at: '+e.rowData.date, 
-						color: '#FFF', /*top: 30,*/ height: 'auto',
+						color: '#FFF', 
+						top: 30, height: 'auto',
 						left: 0,
 					}));
 
 				// From: http://bit.ly/GMVY7v
 				//infowin.add(
 				scrollview.add(
+				//view.add(
 					Ti.UI.createLabel({ 
 						text: e.rowData.desc, 
-						color: '#FFF', /*top: 70,*/ height: 'auto',
+						color: '#FFF', 
+						top: 70, height: 'auto',
 						left: 0,
 					}));
 
 				var closeButton = Ti.UI.createButton({ 
-					title: 'close', height: 30, bottom: 10
+					title: 'close', 
+					height: 30, bottom: 10
 				});
 
 				closeButton.addEventListener('click', function() {
 					infowin.close();
 				});
         scrollview.add(closeButton);
+        //view.add(closeButton);
 
+				//scrollview.add(view);
 				//infowin.add(view);
 				infowin.add(scrollview);
 				//infowin.add( closeButton );
 				infowin.open({ modal: true });
+				//infowin.open();
       });
 
       // It does not seem like android will fire longpresses, but I am not
