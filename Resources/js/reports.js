@@ -31,7 +31,7 @@
   Ti.App.addEventListener('mapWindowLoaded', init);
 
   function init(settings) {
-    Ti.API.log('reports.js init called with settings: '+JSON.stringify(settings));
+    Ti.API.debug('reports.js init called with settings: '+JSON.stringify(settings));
     updateSettings(settings);
     $(document).ready(function() {
       map = createMap('map', latitude, longitude, defaultZoom);
@@ -79,13 +79,13 @@
           (typeof(location.lat) === 'undefined') ||
           (typeof(location.lon) === 'undefined') 
          ) {
-        Ti.API.log('handleUpdateGeolocation did not recieve location info');
+        Ti.API.error('handleUpdateGeolocation did not recieve location info');
         return;
       } 
 
       // check to see if it is different then the values we already have
       if ( (latitude != location.lat) || (longitude != location.lon) ) {
-        Ti.API.log('handleUpdateGeolocation updating the "Current Location" layer');
+        Ti.API.info('handleUpdateGeolocation updating the "Current Location" layer');
         var oldLayer = map.getLayersByName('Current Location');
         for (var i = 0; i < oldLayer.length; i++)
         {
@@ -139,7 +139,7 @@
     var lat = latitude;
     var lon = longitude;
 
-    Ti.API.log('js/reports.js mapSetCenter this: '+ JSON.stringify(settings));
+    Ti.API.debug('js/reports.js mapSetCenter this: '+ JSON.stringify(settings));
     // Optionally accept bound parameters
     if (
         typeof settings !== 'undefined' && 
