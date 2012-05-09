@@ -71,15 +71,14 @@
     // TODO: check the number of rows affected and print a message if we deleted
     // anything
     query = 'INSERT INTO categories(id,title,icon,decayimage) '+
-      'VALUES('+ category.id +', "'+ category.title +'", "'+ category.icon 
-      +'", "'+ category.decayimage +'")';
+      'VALUES('+ category.id +', "'+ DoAsciiHex(category.title, 'A2H') +'", "'
+      + category.icon +'", "'+ category.decayimage +'")';
 
     // TODO: return false on error
     db.execute(query);
     return db.lastInsertRowId;
   };
 
-  // TODO: protect against sql injection
   MarchHare.database.getCategory = function(category) {
     if (typeof category == 'undefined') {
       return false;
@@ -90,7 +89,8 @@
       query = 'SELECT * from categories where id=' + category.id;
     }
     else if (typeof category.title != 'undefined') {
-      query = 'SELECT * from categories where title=' + category.title;
+      query = 'SELECT * from categories where title=\'' + 
+      DoAsciiHex(category.title, 'A2H') +'\'';
     }
     else {
       return false;
@@ -110,7 +110,7 @@
     while (rows.isValidRow()) {
       var category = {
         id: rows.fieldByName('id'),
-        title: rows.fieldByName('title'),
+        title: DoAsciiHex(rows.fieldByName('title'), 'H2A'),
         icon: rows.fieldByName('icon'),
         decayimage: rows.fieldByName('decayimage'),
         filter: rows.fieldByName('filter'),
@@ -290,7 +290,7 @@
     // If we cant set the semaphore then we do not have access to the HTTP 
     // Client yet.
     if (!MarchHare.xhrGetSemaphore(
-        'Downloading '+this.title+' icon')) {
+        'Downloading '+this.icon)) {
       return;
     }
 
@@ -308,7 +308,7 @@
     // If we cant set the semaphore then we do not have access to the HTTP 
     // Client yet.
     if (!MarchHare.xhrGetSemaphore(
-        'Downloading '+this.title+' decayimage icon')) {
+        'Downloading '+this.decayIcon)) {
       return;
     }
 
@@ -345,9 +345,12 @@
     
     // Insert the incident
     query = 'INSERT INTO incidents(id, title, description, date, lat, lon, ended) '+
-      'VALUES('+ incident.incident.incidentid +', "'+ incident.incident.incidenttitle +'", "'+
-          incident.incident.incidentdescription +'", "'+ incident.incident.incidentdate +'", '+
-          incident.incident.incidentlatitude +', '+ incident.incident.incidentlongitude +', '+
+      'VALUES('+ incident.incident.incidentid +', "'+ 
+          DoAsciiHex(incident.incident.incidenttitle, 'A2H') +'", "'+
+          DoAsciiHex(incident.incident.incidentdescription, 'A2H') +'", "'+ 
+          incident.incident.incidentdate +'", '+
+          incident.incident.incidentlatitude +', '+ 
+          incident.incident.incidentlongitude +', '+
           incident.incident.incidenthasended +')';
     i = db.execute(query);
     result = db.lastInsertRowId;
@@ -364,8 +367,8 @@
 
   MarchHare.database.updateIncident = function(incident) {
     var query = 'UPDATE incidents SET '+
-      'title=\''+ incident.incident.incidenttitle +'\', '+
-      'description=\''+ incident.incident.incidentdescription+'\', '+
+      'title=\''+ DoAsciiHex(incident.incident.incidenttitle, 'A2H') +'\', '+
+      'description=\''+ DoAsciiHex(incident.incident.incidentdescription, 'A2H') +'\', '+
       'date=\''+ incident.incident.incidentdate+'\', '+
       'lat='+ incident.incident.incidentlatitude+', '+
       'lon='+ incident.incident.incidentlongitude+', '+
@@ -448,8 +451,8 @@
     var incident = {
       incident: {
         incidentid: rows.fieldByName('id'),
-        incidenttitle: rows.fieldByName('title'),
-        incidentdescription: rows.fieldByName('description'),
+        incidenttitle: DoAsciiHex(rows.fieldByName('title'), 'H2A'),
+        incidentdescription: DoAsciiHex(rows.fieldByName('description'), 'H2A'),
         incidentdate: rows.fieldByName('date'),
         locationlatitude: rows.fieldByName('lat'),
         locationlongitude: rows.fieldByName('lon'),
@@ -509,8 +512,8 @@
       var incident = {
         incident: {
           incidentid: rows.fieldByName('id'),
-          incidenttitle: rows.fieldByName('title'),
-          incidentdescription: rows.fieldByName('description'),
+          incidenttitle: DoAsciiHex(rows.fieldByName('title'), 'H2A'),
+          incidentdescription: DoAsciiHex(rows.fieldByName('description'), 'H2A'),
           incidentdate: rows.fieldByName('date'),
           locationlatitude: rows.fieldByName('lat'),
           locationlongitude: rows.fieldByName('lon'),
@@ -695,6 +698,24 @@
     Titanium.App.addEventListener('incidentsDownloaded',
                 testDatabaseIncidentsInit);
 
+    // Test Crazy inserts
+    var incident = {
+      incident: {
+        incidentid: 666,
+        incidenttitle: 'This\'s some crazy; Ass &*^%$#@)(\'\'\'\' shiz!',
+        incidentdescription: 'This\'s some crazy; Ass &*^%$#@)(\'\'\'\' shiz!',
+        incidentdate: '2012-05-09',
+        incidentlatitude:41.885537633863635,
+        incidentlongitude:-87.63296127319336,
+        incidenthasended: 0
+      }
+    };
+    var id = MarchHare.database.setIncident(incident);
+    Ti.API.debug('Testing wonky characters in incidents.  Added '+ 
+      JSON.stringify(incident));
+    Ti.API.debug('Testing wonky characters in incidents.  Recieved '+ 
+      JSON.stringify(MarchHare.database.getIncidentJSON({incident: { incidentid: 666 }})));
+
   }
 
   function testDatabaseCategoriesInit() {
@@ -751,6 +772,51 @@
           return fn.apply(scope, toArray(arguments));
       };
   }
+
+  /*
+      DoAsciiHex comes from CryptoMX Tools: http://bit.ly/KN8UG4
+
+      CryptoMX Tools
+      Copyright (C) 2004 - 2006 Derek Buitenhuis
+
+      This program is free software; you can redistribute it and/or
+      modify it under the terms of the GNU General Public License
+      as published by the Free Software Foundation; either version 2
+      of the License, or (at your option) any later version.
+
+      This program is distributed in the hope that it will be useful,
+      but WITHOUT ANY WARRANTY; without even the implied warranty of
+      MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+      GNU General Public License for more details.
+
+      You should have received a copy of the GNU General Public License
+      along with this program; if not, write to the Free Software
+      Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
+  */
+  function DoAsciiHex(x,dir) {
+    hex="0123456789ABCDEF";
+    almostAscii=' !"#$%&'+"'"+'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ['+'\\'+']^_`abcdefghijklmnopqrstuvwxyz{|}';
+    r="";
+    if(dir=="A2H") {
+      for (i=0; i<x.length; i++) {
+        let=x.charAt(i);
+        pos=almostAscii.indexOf(let)+32;
+        h16=Math.floor(pos/16);
+        h1=pos%16;
+        r+=hex.charAt(h16)+hex.charAt(h1);
+      };
+    };
+
+    if(dir=="H2A") {
+      for (i=0; i<x.length; i++) {
+        let1=x.charAt(2*i);
+        let2=x.charAt(2*i+1);
+        val=hex.indexOf(let1)*16+hex.indexOf(let2);
+        r+=almostAscii.charAt(val-32);
+      };
+    };
+    return r;
+ };
 
 })();
 
