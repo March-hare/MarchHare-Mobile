@@ -284,7 +284,7 @@ function pollForReports() {
   var url = 'http://'+ 
       Ti.App.Properties.getString('action_domain',
       MarchHare.settings.action_domain.default_value)+
-      '/api/?task=decayimage&by=sincedate&date='+lastpoll;
+      '/api/?task=decayimage&by=sincedate&limit=100&date='+lastpoll;
 
   // TODO: start an indicator
   var t = setInterval(function() {
@@ -361,12 +361,13 @@ function handleServerResponse(response) {
 
       // if we already found a newIncident we dont have to keep checking
       if (!newIncidents) {
-        // Loop across the assigned categories to see if it is one we are i
+        // Loop across the assigned categories to see if it is one we are
         // interested in
         for (j in jNewIncidents.payload.incidents[i].categories) {
-          if (jNewIncidents.payload.incidents[i].categories[j].category.id in categories) {
+          if ( categories.indexOf(parseInt(jNewIncidents.payload.incidents[i].categories[j].category.id)) != -1) {
             newIncidents = true;
-          }
+            break;
+          } 
         }
       }
     }
