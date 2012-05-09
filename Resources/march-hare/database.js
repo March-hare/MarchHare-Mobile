@@ -552,11 +552,10 @@
   }
 
   MarchHare.database.initializeIncidents = function() { 
-    MarchHare.database.flushIncidents();
     var url = 'http://'+ 
         Ti.App.Properties.getString('action_domain',
           MarchHare.settings.action_domain.default_value)+
-        '/api?task=decayimage';
+        '/api?task=decayimage&limit=100';
 
     // TODO: start an indicator
     var t = setInterval(function() {
@@ -570,7 +569,7 @@
       MarchHare.xhrProcess({
         url: url,
         onload: function(response) { 
-          handleServerResponse(response);
+          MarchHare.database.handleServerResponseIncidents(response);
           Ti.App.fireEvent('incidentsDownloaded');
         }
       });
@@ -582,36 +581,66 @@
   MarchHare.database.handleServerResponseIncidents = function(response) {
     var jNewIncidents = JSON.parse(response);
     var newIncidents = false;
+    var incidentids = [];
+    var error = false;
 
     if (
       typeof jNewIncidents == 'undefined' ||
       typeof jNewIncidents.payload == 'undefined' ||
       typeof jNewIncidents.payload.incidents == 'undefined' ||
-      !(jNewIncidents.payload.incidents instanceof Array) ){
-      Ti.API.error('initializeIncidents: recieved invalid json from the server: '+
-        JSON.stringify(jNewIncidents));
-      return false;
+      !(jNewIncidents.payload.incidents instanceof Array)
+      ) {
+
+      // It may just be the case that we have not recieved any data back 
+      // from our request
+      if (
+        typeof jNewIncidents.error.code != 'undefined' && 
+        (jNewIncidents.error.code == "007") && 
+        typeof jNewIncidents.error.message != 'undefined'
+      ) {
+      }
+      else {
+        Ti.API.error('MarchHare.database.handleServerResponseIncidents: recieved invalid json from the server: '+
+          JSON.stringify(jNewIncidents));
+        error = true;
+      }
+    } else {
+
+      // TODO: this finishes before the settings are sent to the map, so it does
+      // not actually load until after the next poll
+      for ( var i  in jNewIncidents.payload.incidents) {
+        incidentids.push(parseInt(jNewIncidents.payload.incidents[i].incident.incidentid));
+        var incident = {
+          incident: {
+            incidentid: jNewIncidents.payload.incidents[i].incident.incidentid,
+            incidenttitle: jNewIncidents.payload.incidents[i].incident.incidenttitle,
+            incidentdescription: jNewIncidents.payload.incidents[i].incident.incidentdescription,
+            incidentdate: jNewIncidents.payload.incidents[i].incident.incidentdate,
+            incidentlatitude: jNewIncidents.payload.incidents[i].incident.locationlatitude,
+            incidentlongitude: jNewIncidents.payload.incidents[i].incident.locationlongitude,
+            incidenthasended: jNewIncidents.payload.incidents[i].incident.incidenthasended,
+          },
+          categories: jNewIncidents.payload.incidents[i].categories
+        };
+
+        if (MarchHare.database.getIncidentJSON(incident)) {
+          MarchHare.database.updateIncident(incident);
+        } else {
+          MarchHare.database.setIncident(incident);
+        }
+      }
     }
 
-    for ( var i  in jNewIncidents.payload.incidents) {
-      newIncidents = true;
-      var incident = {
-        incident: {
-          incidentid: jNewIncidents.payload.incidents[i].incident.incidentid,
-          incidenttitle: jNewIncidents.payload.incidents[i].incident.incidenttitle,
-          incidentdescription: jNewIncidents.payload.incidents[i].incident.incidentdescription,
-          incidentdate: jNewIncidents.payload.incidents[i].incident.incidentdate,
-          incidentlatitude: jNewIncidents.payload.incidents[i].incident.locationlatitude,
-          incidentlongitude: jNewIncidents.payload.incidents[i].incident.locationlongitude,
-        },
-        categories: jNewIncidents.payload.incidents[i].categories
-      };
-
-      MarchHare.database.setIncident(incident);
-    }
-
-    if (!newIncidents) {
-      Ti.API.debug('nitializeIncidents: did not recieve any reports');
+    // Delete all old incidents
+    var rows = MarchHare.database.getIncidents();
+    while (rows.isValidRow()) {
+      var id = rows.fieldByName('id');
+      rows.next();
+      if (incidentids.indexOf(id) != -1) { continue; }
+      var query = 'DELETE FROM incident_categories WHERE incident_id='+id;
+      db.execute(query);
+      query = 'DELETE FROM incidents WHERE id='+id;
+      db.execute(query);
     }
   }
 

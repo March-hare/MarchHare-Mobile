@@ -125,6 +125,7 @@ if (DEV) {
 
 // Force a lookup of all categories everytime the application starts
 MarchHare.database.initializeCategories();
+MarchHare.database.initializeIncidents();
 MarchHare.database.initializeMidPoint();
 
 // TODO: in testing I have noticed that this completes before the MapWindow is 
