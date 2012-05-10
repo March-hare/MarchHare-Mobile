@@ -229,8 +229,10 @@
 
       // Loop over each icon setting externalGraphic and x,y offsets
       $.each(incidents[i].icon, function(index, icon) {
-        
+       
+				if (icon === 'undefined' || icon === '') { return; } 
         var newIconStyle =  OpenLayers.Util.extend({}, iconStyle);
+				Ti.API.info('reports.js using icon: '+ icon);
         newIconStyle.externalGraphic = icon;
 
         // TODO: -13 is a magic number here that got this working.

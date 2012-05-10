@@ -135,9 +135,11 @@
 
     // Configure an event handler to try and download the category icons to
     // local storage after the categories have been intialized
+		/*
     Ti.App.addEventListener('categoriesDownloaded', function() {
       downloadCategoryIcons();
     });
+		*/
 
     var t = setInterval(function() {
 

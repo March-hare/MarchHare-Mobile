@@ -406,6 +406,7 @@ function notifyUser() {
  if (Ti.App.Properties.getBool('vibrate', false)) {
     Ti.API.log('Vibrating the phone');
     Titanium.Media.vibrate();
+    Titanium.Media.beep();
 	}
 }
 
