@@ -29,8 +29,7 @@
     // that is not a checkbox diverted to its own modal window
     var domainLabel = Ti.UI.createLabel({ 
       text: 'Action Domain: ', 
-      top: 0, left: 0,
-      //color: '#fff' 
+      left: 0,
 		});
 
     domainRow.add(domainLabel);
@@ -39,7 +38,7 @@
     // want to use.  We will have to change this dependent on a new property
     // in the MarchHare.settings list
     var domainField = Ti.UI.createTextField( { 
-      left:0, width: 200, top: 30,
+      left:0,
       hintText: Ti.App.Properties.getString('action_domain', 
         MarchHare.settings.action_domain.default_value),
       autoCorrect: false,
@@ -79,13 +78,12 @@
 
     var pollLabel = Ti.UI.createLabel({ 
       text: 'Poll Frequency in Seconds:', 
-      top: 10, left: 0,
-      //color: '#fff' 
+      left: 0,
 		});
     pollRow.add(pollLabel);
 
     var pollField = Ti.UI.createTextField( { 
-      top: 5, width: 40, right: 10,
+      width: 120, right: 10,
       hintText: Ti.App.Properties.getString('poll', 
         MarchHare.settings.poll.default_value),
       autoCorrect: false,
