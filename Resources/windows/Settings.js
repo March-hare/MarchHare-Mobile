@@ -8,7 +8,7 @@
 	var useModal = (Ti.Platform.osname == 'android') ? true : false;
   MarchHare.ui.createSettingsWindow = function() {
     var win = Ti.UI.createWindow({ 
-      //backgroundColor: '#000',
+      backgroundColor: '#000',
       title: 'Settings',
       modal: useModal
     });
@@ -19,7 +19,11 @@
         headerTitle: "Application Settings"
     });
 
-    var domainRow = Ti.UI.createTableViewRow({ height: 50 });
+    var domainRow = Ti.UI.createTableViewRow({ 
+      layout: 'vertical',
+      contentHeight: 'auto',
+      contentWidth: 'auto',
+    });
 
     // TODO: this should actually all be wrapped in a table with each setting 
     // that is not a checkbox diverted to its own modal window
