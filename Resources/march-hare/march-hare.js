@@ -76,7 +76,7 @@ var MarchHare = {
   settings: {
     action_domain: {
       title: 'Action Domain',
-      default_value: 'ushahidi.march-hare.org',
+      default_value: 'nato.march-hare.org',
       func: Ti.App.Properties.setString, 
       verify: verifyActionDomain
     },
