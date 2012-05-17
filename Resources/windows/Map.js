@@ -1,28 +1,12 @@
 (function () {
   MarchHare.ui.createMapView = function() {
-		var url;
-  	if (Ti.Platform.name === 'android') {
-			url = '../pages/map.html';
-		} else {
-			url = 'pages/map.html';
-		}
+		var url = '../pages/map.html';
 
     var webview = Ti.UI.createWebView({ 
 			url: url,
-			touchEnabled: true
+			touchEnabled: true,
+      size: { height:Ti.UI.SIZE,width:Ti.UI.SIZE }
 		});
-
-    // TODO: The gestures below need to be supported
-    // https://wiki.appcelerator.org/display/guides/Supporting+Gestures
-    // Swipes should move the map
-    //webview.addListener('swipe', scrollMap(e));
-    
-    // Pinches should zoom the map 
-    // only supported in iOS in 1.8 of the API
-   
-    // Long press should submit a report
-    
-    // Touch, if on an incident, should show more info
 
     // Send the application settings to the js when we are loaded
     webview.addEventListener('load', function(e) {
