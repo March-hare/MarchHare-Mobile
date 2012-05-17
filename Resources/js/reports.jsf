@@ -1,4 +1,5 @@
 (function() {
+  Ti.API.debug('reports.js');
   var latitude = null;
   var longitude = null;
   var defaultZoom = null;
@@ -35,10 +36,6 @@
     updateSettings(settings);
     $(document).ready(function() {
       map = createMap('map', latitude, longitude, defaultZoom);
-      /*
-      map.addControl( new OpenLayers.Control.LoadingPanel(
-        {minSize: new OpenLayers.Size(573, 366)}) );
-      */
       map.addControl(new OpenLayers.Control.Navigation({documentDrag: true}));
       Ti.App.addEventListener('newSettingsAvailable', newSettingsAvailable);
       Ti.App.addEventListener('gotoLocation', mapSetCenter);
@@ -151,7 +148,8 @@
 
     // Create a lat/lon object and center the map
     var myPoint = new OpenLayers.LonLat(lon, lat);
-    myPoint.transform(proj_4326, proj_900913);
+    //myPoint.transform(proj_4326, proj_900913);
+    myPoint.transform(proj, map.getProjectionObject());
     
     // Display the map centered on a latitude and longitude
     map.setCenter(myPoint, defaultZoom);
@@ -229,6 +227,9 @@
 
       // Loop over each icon setting externalGraphic and x,y offsets
       $.each(incidents[i].icon, function(index, icon) {
+        Ti.API.debug('showIncidentMap title: '+ 
+          incidents[i].incident.incidenttitle+ 
+          ', icon: '+ icon);
         
         var newIconStyle =  OpenLayers.Util.extend({}, iconStyle);
         newIconStyle.externalGraphic = icon;
@@ -314,27 +315,16 @@
     
     // Create the map object
     var map = new OpenLayers.Map(targetElement, mapOptions);
-    
-    var osm_mapnik = new OpenLayers.Layer.OSM.Mapnik("OSM Mapnik", {
-      sphericalMercator: true,
-      maxExtent: new OpenLayers.Bounds(-20037508.34,-20037508.34,20037508.34,20037508.34)});
+    var arrayOSM = ["http://otile1.mqcdn.com/tiles/1.0.0/osm/${z}/${x}/${y}.jpg",
+                    "http://otile2.mqcdn.com/tiles/1.0.0/osm/${z}/${x}/${y}.jpg",
+                    "http://otile3.mqcdn.com/tiles/1.0.0/osm/${z}/${x}/${y}.jpg",
+                    "http://otile4.mqcdn.com/tiles/1.0.0/osm/${z}/${x}/${y}.jpg"];
 
-    var osm_tah = new OpenLayers.Layer.OSM.Mapnik("OSM Tiles@Home", {
-      sphericalMercator: true,
-      maxExtent: new OpenLayers.Bounds(-20037508.34,-20037508.34,20037508.34,20037508.34)});
+    var osm_mapquest = new OpenLayers.Layer.OSM("OSM", arrayOSM); 
 
-    var osm_cycle = new OpenLayers.Layer.OSM.Mapnik("OSM Cycling Map", {
-      sphericalMercator: true,
-      maxExtent: new OpenLayers.Bounds(-20037508.34,-20037508.34,20037508.34,20037508.34)});
-    
-    // Add the default layers
-    map.addLayers([osm_mapnik, osm_tah, osm_cycle]);
+    map.addLayers([osm_mapquest]);
     
     // Add controls
-    map.addControl(new OpenLayers.Control.Navigation());
-    map.addControl(new OpenLayers.Control.PanZoom());
-    map.addControl(new OpenLayers.Control.Attribution());
-    map.addControl(new OpenLayers.Control.MousePosition());
     map.addControl(new OpenLayers.Control.LayerSwitcher());
     
     // Check for the zoom level
@@ -386,15 +376,6 @@ function addFeatureSelectionEvents(map, layer) {
       content += "<div class=\"infowindow_content\">";
       content += "\n<div class=\"infowindow_meta\">";
       content += event.feature.attributes.description;
-      // Zoom is currently not working, commenting this out until we have
-      // time to add this feature
-      /*
-      content += "<a href='javascript:zoomToSelectedFeature("+ lon + ","+ lat +",1)'>";
-      content += "Zoom in</a>";
-      content += "&nbsp;&nbsp;|&nbsp;&nbsp;";
-      content += "<a href='javascript:zoomToSelectedFeature("+ lon + ","+ lat +",-1)'>";
-      content += "Zoom out</a></div>";
-      */
       content += "</div><div style=\"clear:both;\"></div></div>";		
 
       if (content.search("<script") != -1)

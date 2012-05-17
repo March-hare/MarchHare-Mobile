@@ -11,7 +11,7 @@
     <sdk-version>1.8.2</sdk-version>
     <id>org.marchhare.natog82012</id>
     <name>NATO-G8 2012</name>
-    <version>Beta RC1</version>
+    <version>Beta RC2</version>
     <publisher>March-Hare Communications Collective</publisher>
     <url>http://march-hare.org</url>
     <description>Mobile application for receving on the ground information during the 2012 Chicago protest of NATO/G8</description>
@@ -37,7 +37,7 @@
         </orientations>
     </iphone>
     <android xmlns:android="http://schemas.android.com/apk/res/android">
-        <manifest android:versionCode="2" android:versionName="Smokes">
+        <manifest android:versionCode="3" android:versionName="FTP">
             <uses-permission android:name="android.permission.ACCESS_GPS"/>
             <uses-permission android:name="android.permission.ACCESS_LOCATION"/>
         </manifest>

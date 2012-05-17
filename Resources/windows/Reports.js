@@ -34,7 +34,11 @@
 					title: e.rowData.title,
           backgroundColor: '#000'
 				});
-        var scrollview = Ti.UI.createScrollView({ layout: 'vertical' });
+        var scrollview = Ti.UI.createScrollView({ 
+          layout: 'vertical',
+          contentHeight: 'auto',
+          contentWidth: 'auto',
+        });
 				//var view = Ti.UI.createView({ layout:'vertical', });
 
 				e.row.backgroundColor = '#000000';
@@ -82,19 +86,13 @@
 
       // It does not seem like android will fire longpresses, but I am not
       // sure that iOS doesn't fire both
-      if (MarchHare.ui.Android) {
-        data[i].addEventListener('longclick', fireGotoLocation);
-      } else {
-        data[i].addEventListener('longpress', fireGotoLocation);
-      }
-
-      function fireGotoLocation(e) {
+      data[i].addEventListener('longclick', function (e){
         Ti.API.log('longpress or longclick detected gotoLocation being fired');
 				Ti.App.fireEvent('gotoLocation', {
 					lat: e.rowData.lat,
 					lon: e.rowData.lon
 				});
-      }
+      });
 
       // TODO: we should move all formatting stuff like this to jss files
       var top = -2;
@@ -148,7 +146,7 @@
     var win = Ti.UI.createWindow({
       backgroundColor: '#000',
       title: 'Reports',
-      modal: useModal
+      modal: useModal,
     });
 
     var view = MarchHare.ui.createReportsView();
