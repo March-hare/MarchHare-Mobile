@@ -225,8 +225,11 @@
     db.execute(query);
   }
 
-  MarchHare.database.flushIncidentCategories = function() {
+  MarchHare.database.flushIncidentCategories = function(incidentid) {
     var query = "DELETE FROM incident_categories";
+		if (typeof incidentid === 'number') {
+       query += ' WHERE incident_id = '+ incidentid;
+    }
     db.execute(query);
   }
 
@@ -375,43 +378,15 @@
 
     db.execute(query);
 
-    // Update all categories associated with the incident
-    query = 'SELECT * FROM incident_categories WHERE incident_id='+
-      incident.incident.incidentid;
-    rows = db.execute(query);
-
-    // Get a list of new categories
-    var newCats = [];
+    // Update all categories associated with the incident by deleting all of the associated
+		// incident_categories rows and then re-add them
+  	MarchHare.database.flushIncidentCategories(incident.incident.incidentid);
     for (i in incident.categories) {
-      newCats.push(incident.categories[i].category.id);
+			query = 'INSERT INTO incident_categories(category_id, incident_id) '+
+				'VALUES('+ incident.categories[i].category.id +', '+ incident.incident.incidentid +')';
+      Ti.API.log('database.js::updateIncident: query='+query);
+			db.execute(query);
     }
-
-    // Get a list of currently assigned categories
-    var cats = [];
-    while (rows.isValidRow()) {
-      cats.push(rows.fieldByName('category_id'));
-      rows.next();
-    }
-    rows.close();
-
-    // Look for any new cats and add them
-    for (i in newCats) {
-      if (!i in cats) {
-        query = 'INSERT INTO incident_categories(category_id, incident_id)'+
-          'VALUES('+ i +', '+ incident.incident.incidentid +')';
-        db.execute(query);
-      }
-    }
-    
-    // Look for any deleted cats and remove them
-    for (i in cats) {
-      if (!i in newCats) {
-        query = 'DELETE FROM incident_categories where category_id='+ i 
-          +' AND incident_id='+ incident.incident.incidentid;
-        db.execute(query);
-      }
-    }
-
   }
 
   MarchHare.database.setIncidentRead = function(id, read) {
@@ -437,6 +412,7 @@
     var query = 'SELECT * FROM incidents '+
           'WHERE id='+ incident.incidentid;
 
+    Ti.API.log('MarchHare.database.getIncident query: '+query);
     return result = db.execute(query);
   };
 
@@ -456,12 +432,13 @@
         locationlongitude: rows.fieldByName('lon'),
         incidenthasended: rows.fieldByName('ended')
       },
-      icon: []
+      icon: [],
+			categories: []
     };
 
     // TODO: this does not take into consideration decayicon images
     // get the associated category icons in the object
-    query = 'SELECT icon FROM categories '+
+    query = 'SELECT icon,categories.id FROM categories '+
       'LEFT JOIN incident_categories ON '+
       '(incident_categories.category_id = categories.id) '+
       'WHERE incident_categories.incident_id='+ incident.incident.incidentid;
@@ -469,6 +446,7 @@
     rows = db.execute(query);
     while (rows.isValidRow()) {
       incident.icon.push(rows.fieldByName('icon'));
+			incident.categories.push({category: {id: rows.fieldByName('id')}});
       rows.next();
     }
     rows.close();
@@ -548,8 +526,13 @@
     return result;
  }
 
-  MarchHare.database.flushIncidents = function() {
+  MarchHare.database.flushIncidents = function(incidentid) {
     var query = 'DELETE from incidents';
+    if (typeof incidentid === 'number') {
+      query += ' WHERE id = '+ incidentid;
+    }
+
+		Ti.API.log('MarchHare.database.flushIncidents query: '+ query);
     return db.execute(query);
   }
 
@@ -725,7 +708,6 @@
     Titanium.App.addEventListener('incidentsDownloaded',
                 testDatabaseIncidentsInit);
 
-    // Test Crazy inserts
     var incident = {
       incident: {
         incidentid: 666,
@@ -735,14 +717,34 @@
         incidentlatitude:41.885537633863635,
         incidentlongitude:-87.63296127319336,
         incidenthasended: 0
-      }
+      },
+      categories: [
+				{category: {id: 3}},
+				{category: {id: 4}},
+				{category: {id: 5}}
+			]
     };
+
+    // Test Crazy inserts
     var id = MarchHare.database.setIncident(incident);
     Ti.API.log('Testing wonky characters in incidents.  Added '+ 
       JSON.stringify(incident));
     Ti.API.log('Testing wonky characters in incidents.  Recieved '+ 
-      JSON.stringify(MarchHare.database.getIncidentJSON({incident: { incidentid: 666 }})));
+      JSON.stringify(MarchHare.database.getIncidentJSON({incident: { incidentid: incident.incident.incidentid}})));
 
+		// Test flushing single category, will throw an exception below on error
+    MarchHare.database.flushIncidents(id);
+
+		// test incident updates
+    var id = MarchHare.database.setIncident(incident);
+    Ti.API.log('Testing incident update with changed categories.  Added '+ 
+      JSON.stringify(MarchHare.database.getIncidentJSON({incident: {incidentid: incident.incident.incidentid}}).categories));
+		incident.categories = [
+				{category: {id: 5}}
+    ];
+		MarchHare.database.updateIncident(incident);
+    Ti.API.log('Testing incident update with changed categories.  Recieved '+ 
+      JSON.stringify(MarchHare.database.getIncidentJSON({incident: {incidentid: incident.incident.incidentid}})));
   }
 
   function testDatabaseCategoriesInit() {

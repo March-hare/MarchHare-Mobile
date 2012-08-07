@@ -13,8 +13,8 @@ Ti.include(
     'march-hare/database.js'
     );
 
-//MarchHare.database.testDatabase();
-
+MarchHare.database.testDatabase();
+return;
 var reportsInitialized = false;
 
 var tabGroup;
@@ -327,7 +327,6 @@ function handleServerResponse(response) {
       typeof jNewIncidents.error.message != 'undefined'
     ) {
       Ti.API.info('pollReports: '+ jNewIncidents.error.message);
-      //Ti.App.Properties.setString('lastpoll', new Date().toISOString());
     }
     else {
       Ti.API.error('pollReports: recieved invalid json from the server: '+
@@ -389,7 +388,7 @@ function handleServerResponse(response) {
   }
 
   if (!error) {
-    //Ti.App.Properties.setString('lastpoll', new Date().toISOString());
+    Ti.App.Properties.setString('lastpoll', new Date().toISOString());
   }
 }
 
