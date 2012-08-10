@@ -158,16 +158,14 @@ var pollInterval;
 Ti.App.addEventListener('mapInitialized', function() {
   // mapInitialized gets called at the end of showIncidentMap, we want to 
   // prevent it from being called again.
-  if (! Ti.App.Properties.setBool('map_initialized', true)) {
-    Ti.API.log('mapInitialized event recieved');
-    Ti.App.Properties.setBool('map_initialized', true);
-    Ti.API.log('polling for new reports every '+
-      Ti.App.Properties.getInt('poll', MarchHare.settings.poll.default_value)*1000 +
-      ' seconds');
-    pollInterval = setInterval(pollForReports, 
-      Ti.App.Properties.getInt('poll', MarchHare.settings.poll.default_value) 
-      *1000 /* seconds * milliseconds */);
-  }
+  Ti.API.log('mapInitialized event recieved');
+  Ti.App.Properties.setBool('map_initialized', true);
+	Ti.API.log('polling for new reports every '+
+		Ti.App.Properties.getInt('poll', MarchHare.settings.poll.default_value)*1000 +
+		' seconds');
+	pollInterval = setInterval(pollForReports, 
+		Ti.App.Properties.getInt('poll', MarchHare.settings.poll.default_value) 
+		*1000 /* seconds * milliseconds */);
 });
 
 Ti.App.addEventListener('pollIntervalChanged', function() {
