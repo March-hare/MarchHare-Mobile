@@ -82,14 +82,14 @@ var MarchHare = {
     },
     latitude: {
       title: 'Lattitude',
-      default_value: '41.889818923027',
+      default_value: '27.9472',
       // TODO: figure out if this can actually handle a geo position
       func: Ti.App.Properties.setDouble, 
       verify: function(){}
     },
     longitude: {
       title: 'Longitude',
-      default_value: '-87.637596505706',
+      default_value: '82.4586',
       // TODO: figure out if this can actually handle a geo position
       func: Ti.App.Properties.setDouble, 
       verify: function(){}

@@ -1,8 +1,8 @@
-#appname:NATO-G8 2012
+#appname:RNC 2012
 #publisher:March-Hare Communications Collective
 #url:http://march-hare.org
 #image:appicon.png
-#appid:org.marchhare.natog82012
-#desc:Mobile application for those resisting the Nato/G8 summits in Chicago 2012. March Hare Solution is a free, public, map-based, crowd-source broadcasting application that enables you to get information about what is happening on the street during the Chicago 2012 protests. Based on Ushahidi and other software this Android app maps real-time, verified information you can use to be part of the action on the street. You control how much and what type of information you receive by adjusting your settings.
+#appid:org.marchhare.RNC2012
+#desc:Mobile application for those resisting the 2012 RNC in Tampa, FL. March Hare Solution is a free, public, map-based, crowd-source broadcasting application that enables you to get information about what is happening on the street during the 2012 RNC protests. Based on Ushahidi and other software this Android app maps real-time, verified information you can use to be part of the action on the street. You control how much and what type of information you receive by adjusting your settings.
 #type:mobile
 #guid:56cc6670-c246-4de4-ad56-aeebb472d9dd

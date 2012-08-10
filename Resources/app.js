@@ -389,7 +389,7 @@ function handleServerResponse(response) {
   }
 
   if (!error) {
-    //Ti.App.Properties.setString('lastpoll', new Date().toISOString());
+    Ti.App.Properties.setString('lastpoll', new Date().toISOString());
   }
 }
 
