@@ -156,14 +156,16 @@ Ti.App.addEventListener('actionDomainChanged', function() {
 
 var pollInterval;
 Ti.App.addEventListener('mapInitialized', function() {
+  // mapInitialized gets called at the end of showIncidentMap, we want to 
+  // prevent it from being called again.
   Ti.API.log('mapInitialized event recieved');
   Ti.App.Properties.setBool('map_initialized', true);
-  Ti.API.log('polling for new reports every '+
-    Ti.App.Properties.getInt('poll', MarchHare.settings.poll.default_value)*1000 +
-    ' seconds');
-  pollInterval = setInterval(pollForReports, 
-    Ti.App.Properties.getInt('poll', MarchHare.settings.poll.default_value) 
-    *1000 /* seconds * milliseconds */);
+	Ti.API.log('polling for new reports every '+
+		Ti.App.Properties.getInt('poll', MarchHare.settings.poll.default_value)*1000 +
+		' seconds');
+	pollInterval = setInterval(pollForReports, 
+		Ti.App.Properties.getInt('poll', MarchHare.settings.poll.default_value) 
+		*1000 /* seconds * milliseconds */);
 });
 
 Ti.App.addEventListener('pollIntervalChanged', function() {
@@ -327,7 +329,6 @@ function handleServerResponse(response) {
       typeof jNewIncidents.error.message != 'undefined'
     ) {
       Ti.API.info('pollReports: '+ jNewIncidents.error.message);
-      //Ti.App.Properties.setString('lastpoll', new Date().toISOString());
     }
     else {
       Ti.API.error('pollReports: recieved invalid json from the server: '+
@@ -389,7 +390,7 @@ function handleServerResponse(response) {
   }
 
   if (!error) {
-    //Ti.App.Properties.setString('lastpoll', new Date().toISOString());
+    Ti.App.Properties.setString('lastpoll', new Date().toISOString());
   }
 }
 
