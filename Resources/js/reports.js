@@ -328,10 +328,6 @@
     map.addLayers([osm_mapquest]);
     
     // Add controls
-    map.addControl(new OpenLayers.Control.Navigation());
-    map.addControl(new OpenLayers.Control.PanZoom());
-    map.addControl(new OpenLayers.Control.Attribution());
-    map.addControl(new OpenLayers.Control.MousePosition());
     map.addControl(new OpenLayers.Control.LayerSwitcher());
     
     // Check for the zoom level
