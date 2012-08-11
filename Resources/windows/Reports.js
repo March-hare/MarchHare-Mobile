@@ -13,7 +13,7 @@
     for (i in incidents) {
       data[i] = Ti.UI.createTableViewRow({
         hasChild: true,
-				height: 50,
+				height: 65,
 				top: 0,
         // title is a keyword that we dont want to use here
         tit: incidents[i].incident.incidenttitle,
