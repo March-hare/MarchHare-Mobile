@@ -79,13 +79,13 @@
           (typeof(location.lat) === 'undefined') ||
           (typeof(location.lon) === 'undefined') 
          ) {
-        Ti.API.debug('handleUpdateGeolocation did not recieve location info');
+        Ti.API.error('handleUpdateGeolocation did not recieve location info');
         return;
       } 
 
       // check to see if it is different then the values we already have
       if ( (latitude != location.lat) || (longitude != location.lon) ) {
-        Ti.API.debug('handleUpdateGeolocation updating the "Current Location" layer');
+        Ti.API.info('handleUpdateGeolocation updating the "Current Location" layer');
         var oldLayer = map.getLayersByName('Current Location');
         for (var i = 0; i < oldLayer.length; i++)
         {
